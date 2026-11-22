@@ -61,7 +61,8 @@ h2 small{font-weight:500;color:var(--muted-fg);font-size:13px}
 .desk.working{border-color:var(--primary);background:linear-gradient(#fff,var(--accent-soft))}
 .desk.waiting{border-color:var(--warn-border);background:linear-gradient(#fff,var(--warn-bg))}
 .desk.off{opacity:.55}
-.av{position:absolute;top:-30px;left:50%;transform:translateX(-50%);width:64px;height:64px;border-radius:50%;background:#fff;border:2px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:34px}
+.av{position:absolute;top:-30px;left:50%;transform:translateX(-50%);width:64px;height:64px;border-radius:50%;background:#fff;border:2px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:34px;overflow:hidden}
+.av img{width:100%;height:100%;object-fit:cover}
 .desk.working .av{border-color:var(--primary);animation:bob 1.6s ease-in-out infinite}
 @keyframes bob{50%{transform:translateX(-50%) translateY(-4px)}}
 .bubble{position:absolute;bottom:calc(100% + 38px);left:50%;transform:translateX(-50%);background:var(--fg);color:#fff;font-size:12px;padding:5px 10px;border-radius:10px;max-width:180px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;z-index:2}
@@ -182,7 +183,7 @@ function render(){
   }).join('');
   $('#desks').innerHTML = staff.map(s => {
     const mine = tasks.filter(t => t.staff_id === s.id && t.col !== 'done').length;
-    return `<div class="desk ${s.status}" data-staff="${s.id}">${s.bubble ? `<div class="bubble" title="${esc(s.bubble)}">${esc(s.bubble)}</div>` : ''}<div class="av">${esc(s.emoji)}</div><div class="nm">${esc(s.name)}</div><div class="rl">${esc(s.role)}</div><span class="pill ${s.status}">${STATUS[s.status] || s.status}</span><div class="jobs">맡은 일 ${mine}개</div></div>`;
+    return `<div class="desk ${s.status}" data-staff="${s.id}">${s.bubble ? `<div class="bubble" title="${esc(s.bubble)}">${esc(s.bubble)}</div>` : ''}<div class="av">${s.avatar ? `<img src="${esc(s.avatar)}" alt="${esc(s.name)}">` : esc(s.emoji)}</div><div class="nm">${esc(s.name)}</div><div class="rl">${esc(s.role)}</div><span class="pill ${s.status}">${STATUS[s.status] || s.status}</span><div class="jobs">맡은 일 ${mine}개</div></div>`;
   }).join('');
 }
 function openModal(html){ $('#modal').innerHTML = html; $('#ov').classList.remove('hidden'); }
@@ -244,7 +245,7 @@ async function moveTask(col){
 function showStaff(id){
   const s = sById(id); const mine = tasks.filter(t => t.staff_id === id && t.col !== 'done');
   openModal(`<h3><span>${esc(s.emoji)} ${esc(s.name)} <small style="font-weight:500;color:var(--muted-fg);font-size:14px">${esc(s.role)}</small></span><button class="x" data-close>×</button></h3>
-    <span class="pill ${s.status}">${STATUS[s.status]}</span>${s.bubble ? ` <span style="font-size:13px;color:var(--muted-fg)">「${esc(s.bubble)}」</span>` : ''}
+    ${s.pet ? `<div style="font-size:13px;color:var(--muted-fg);margin-bottom:8px">${esc(s.pet)}</div>` : ''}<span class="pill ${s.status}">${STATUS[s.status]}</span>${s.bubble ? ` <span style="font-size:13px;color:var(--muted-fg)">「${esc(s.bubble)}」</span>` : ''}
     <label>지침 (이 직원이 늘 지키는 것)</label><textarea id="sGuide" style="min-height:160px">${esc(s.guide)}</textarea>
     <div class="row"><button class="btn primary" id="sSave">지침 저장</button></div>
     <label>맡은 일</label><div class="col-b" style="padding:0">${mine.map(t => `<button class="task" data-id="${t.id}"><div class="t">${esc(t.title)}</div><div class="m"><span>${COLNAME[t.col]}</span><span>${ago(t.updated_at)}</span></div></button>`).join('') || '<div class="empty">없음</div>'}</div>`);
