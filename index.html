@@ -55,17 +55,17 @@ h2 small{font-weight:500;color:var(--muted-fg);font-size:13px}
 .task .m{font-size:12px;color:var(--muted-fg);margin-top:3px;display:flex;gap:8px;flex-wrap:wrap}
 .more{font-size:13px;color:var(--accent-fg);background:none;border:0;padding:4px 6px;text-align:left}
 /* 사무실 */
-.desks{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:58px 14px;padding-top:36px}
-.desk{position:relative;background:var(--card);border:1px solid var(--border);border-radius:14px;padding:44px 14px 14px;text-align:center;cursor:pointer;box-shadow:var(--shadow);margin-top:30px}
+.desks{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:72px 14px;padding-top:50px}
+.desk{position:relative;background:var(--card);border:1px solid var(--border);border-radius:14px;padding:58px 14px 14px;text-align:center;cursor:pointer;box-shadow:var(--shadow);margin-top:40px}
 .desk:hover{border-color:var(--primary)}
 .desk.working{border-color:var(--primary);background:linear-gradient(#fff,var(--accent-soft))}
 .desk.waiting{border-color:var(--warn-border);background:linear-gradient(#fff,var(--warn-bg))}
 .desk.off{opacity:.55}
-.av{position:absolute;top:-30px;left:50%;transform:translateX(-50%);width:64px;height:64px;border-radius:50%;background:#fff;border:2px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:34px;overflow:hidden}
-.av img{width:100%;height:100%;object-fit:cover}
+.av{position:absolute;top:-44px;left:50%;transform:translateX(-50%);width:92px;height:92px;border-radius:50%;background:#fff;border:2px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:34px;overflow:hidden}
+.av img{width:100%;height:100%;object-fit:cover;background:#F7F4EE}
 .desk.working .av{border-color:var(--primary);animation:bob 1.6s ease-in-out infinite}
 @keyframes bob{50%{transform:translateX(-50%) translateY(-4px)}}
-.bubble{position:absolute;bottom:calc(100% + 38px);left:50%;transform:translateX(-50%);background:var(--fg);color:#fff;font-size:12px;padding:5px 10px;border-radius:10px;max-width:180px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;z-index:2}
+.bubble{position:absolute;bottom:calc(100% + 52px);left:50%;transform:translateX(-50%);background:var(--fg);color:#fff;font-size:12px;padding:5px 10px;border-radius:10px;max-width:180px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;z-index:2}
 .bubble:after{content:"";position:absolute;top:100%;left:50%;margin-left:-5px;border:5px solid transparent;border-top-color:var(--fg)}
 .desk .nm{font-weight:700;font-size:15px}
 .desk .rl{font-size:12px;color:var(--muted-fg);margin-top:2px}
@@ -99,7 +99,7 @@ textarea{min-height:90px;resize:vertical}
 .err{color:var(--danger);font-size:13px;margin-top:10px}
 .toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--fg);color:#fff;padding:9px 16px;border-radius:10px;font-size:14px;z-index:30}
 /* 폰: 맨 끝에 둬야 위 규칙을 덮음 */
-@media (max-width:600px){header{padding:0 12px;gap:10px}header h1{font-size:15px}.desks{grid-template-columns:1fr 1fr;gap:50px 10px}.desk{padding:40px 8px 12px}.desk .rl{font-size:11px}.bubble{max-width:150px}}
+@media (max-width:600px){header{padding:0 12px;gap:10px}header h1{font-size:15px}.desks{grid-template-columns:1fr 1fr;gap:50px 10px}.desk{padding:52px 8px 12px}.desk .rl{font-size:11px}.bubble{max-width:150px}}
 </style>
 </head>
 <body>
