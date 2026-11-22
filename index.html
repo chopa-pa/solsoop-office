@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<!-- 솔숲 사무실: AI 직원 자리·상태·말풍선과 작업 보드(할 일→하는 중→확인 대기→끝)를 보여 주는 화면 (1단계) -->
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>솔숲 사무실</title>
+<link rel="icon" type="image/png" sizes="32x32" href="./favicon-32.png">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.1/dist/umd/supabase.min.js" crossorigin="anonymous"></script>
+<style>
+:root{
+  --primary:#10b981;--primary-hover:#059669;--accent:#d1fae5;--accent-fg:#047857;--accent-soft:#ecfdf5;
+  --bg:#f8fafc;--card:#fff;--fg:#0f172a;--muted:#f1f5f9;--muted-fg:#64748b;--border:#e2e8f0;--border-strong:#cbd5e1;
+  --warn:#f59e0b;--warn-bg:#fffbeb;--warn-border:#fde68a;--danger:#ef4444;--danger-bg:#fef2f2;
+  --side:#1e293b;--radius:10px;--shadow:0 1px 3px rgba(15,23,42,.06),0 1px 2px rgba(15,23,42,.04);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Pretendard',-apple-system,BlinkMacSystemFont,system-ui,sans-serif;background:var(--bg);color:var(--fg);font-size:15px;line-height:1.5}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+.hidden{display:none!important}
+/* 위 띠 */
+header{position:sticky;top:0;z-index:5;background:var(--side);color:#e2e8f0;display:flex;align-items:center;gap:14px;padding:0 20px;height:58px}
+header h1{font-size:17px;font-weight:700;color:#fff;white-space:nowrap}
+.counts{display:flex;gap:8px;flex:1;overflow-x:auto}
+.cnt{font-size:13px;background:#334155;border-radius:999px;padding:3px 10px;white-space:nowrap}
+.cnt b{color:#fff;margin-left:4px}
+.cnt.wait{background:#78350f;color:#fde68a}
+header a,header button.link{color:#cbd5e1;font-size:13px;text-decoration:none;background:none;border:0;white-space:nowrap}
+header a:hover,header button.link:hover{color:#fff}
+/* 본문 */
+main{display:grid;grid-template-columns:380px 1fr;gap:20px;padding:20px;max-width:1440px;margin:0 auto}
+@media (max-width:900px){main{grid-template-columns:1fr;padding:14px}#officeCol{order:-1}}
+h2{font-size:15px;font-weight:700;display:flex;align-items:center;gap:8px;margin-bottom:10px}
+h2 small{font-weight:500;color:var(--muted-fg);font-size:13px}
+.btn{border:1px solid var(--border-strong);background:var(--card);border-radius:8px;padding:7px 12px;font-size:14px}
+.btn:hover{background:var(--muted)}
+.btn.primary{background:var(--primary);border-color:var(--primary);color:#fff;font-weight:600}
+.btn.primary:hover{background:var(--primary-hover)}
+.btn.warn{background:var(--warn-bg);border-color:var(--warn-border);color:#92400e}
+.btn.danger{color:var(--danger);border-color:#fecaca}
+.btn.sm{padding:4px 9px;font-size:13px}
+/* 작업 보드 */
+.col{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);margin-bottom:12px;box-shadow:var(--shadow)}
+.col-h{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border-bottom:1px solid var(--border);font-weight:600;font-size:14px}
+.col-h .n{color:var(--muted-fg);font-weight:500}
+.col.review .col-h{background:var(--warn-bg);border-color:var(--warn-border);border-radius:var(--radius) var(--radius) 0 0;color:#92400e}
+.col-b{padding:8px;display:flex;flex-direction:column;gap:6px;min-height:42px}
+.empty{color:var(--muted-fg);font-size:13px;padding:6px 6px}
+.task{border:1px solid var(--border);border-radius:8px;padding:9px 11px;background:#fff;cursor:pointer;text-align:left;width:100%}
+.task:hover{border-color:var(--primary)}
+.task .t{font-weight:600;font-size:14px}
+.task .m{font-size:12px;color:var(--muted-fg);margin-top:3px;display:flex;gap:8px;flex-wrap:wrap}
+.more{font-size:13px;color:var(--accent-fg);background:none;border:0;padding:4px 6px;text-align:left}
+/* 사무실 */
+.desks{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:58px 14px;padding-top:36px}
+.desk{position:relative;background:var(--card);border:1px solid var(--border);border-radius:14px;padding:44px 14px 14px;text-align:center;cursor:pointer;box-shadow:var(--shadow);margin-top:30px}
+.desk:hover{border-color:var(--primary)}
+.desk.working{border-color:var(--primary);background:linear-gradient(#fff,var(--accent-soft))}
+.desk.waiting{border-color:var(--warn-border);background:linear-gradient(#fff,var(--warn-bg))}
+.desk.off{opacity:.55}
+.av{position:absolute;top:-30px;left:50%;transform:translateX(-50%);width:64px;height:64px;border-radius:50%;background:#fff;border:2px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:34px}
+.desk.working .av{border-color:var(--primary);animation:bob 1.6s ease-in-out infinite}
+@keyframes bob{50%{transform:translateX(-50%) translateY(-4px)}}
+.bubble{position:absolute;bottom:calc(100% + 38px);left:50%;transform:translateX(-50%);background:var(--fg);color:#fff;font-size:12px;padding:5px 10px;border-radius:10px;max-width:180px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;z-index:2}
+.bubble:after{content:"";position:absolute;top:100%;left:50%;margin-left:-5px;border:5px solid transparent;border-top-color:var(--fg)}
+.desk .nm{font-weight:700;font-size:15px}
+.desk .rl{font-size:12px;color:var(--muted-fg);margin-top:2px}
+.pill{display:inline-block;font-size:12px;border-radius:999px;padding:2px 9px;margin-top:8px;background:var(--muted);color:var(--muted-fg)}
+.pill.working{background:var(--accent);color:var(--accent-fg)}
+.pill.waiting{background:var(--warn-bg);color:#92400e;border:1px solid var(--warn-border)}
+.desk .jobs{font-size:12px;color:var(--muted-fg);margin-top:6px}
+.note{font-size:13px;color:var(--muted-fg);margin-top:16px;line-height:1.6}
+/* 창(모달) */
+.ov{position:fixed;inset:0;background:rgba(15,23,42,.45);display:flex;align-items:flex-start;justify-content:center;padding:40px 14px;z-index:20;overflow-y:auto}
+.modal{background:#fff;border-radius:14px;width:100%;max-width:620px;padding:22px;box-shadow:0 10px 30px rgba(15,23,42,.2)}
+.modal h3{font-size:17px;margin-bottom:14px;display:flex;justify-content:space-between;gap:10px;align-items:flex-start}
+.x{background:none;border:0;font-size:22px;line-height:1;color:var(--muted-fg)}
+label{display:block;font-size:13px;color:var(--muted-fg);margin:12px 0 4px}
+input[type=text],input[type=email],input[type=password],select,textarea{width:100%;border:1px solid var(--border-strong);border-radius:8px;padding:8px 10px;background:#fff}
+textarea{min-height:90px;resize:vertical}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:16px}
+.box{background:var(--muted);border-radius:8px;padding:10px 12px;white-space:pre-wrap;word-break:break-word;font-size:14px}
+.box a{color:var(--accent-fg)}
+.logs{margin-top:6px;display:flex;flex-direction:column;gap:4px;max-height:220px;overflow-y:auto}
+.lg{font-size:13px;display:flex;gap:8px}
+.lg .w{color:var(--muted-fg);white-space:nowrap}
+.steps{display:flex;gap:4px;margin-top:4px}
+.steps span{flex:1;text-align:center;font-size:12px;padding:5px 0;border-radius:6px;background:var(--muted);color:var(--muted-fg)}
+.steps span.on{background:var(--primary);color:#fff;font-weight:600}
+.steps span.on.review{background:var(--warn);}
+/* 로그인 */
+#login{max-width:360px;margin:12vh auto;background:#fff;border:1px solid var(--border);border-radius:14px;padding:28px;box-shadow:var(--shadow)}
+#login h1{font-size:20px;margin-bottom:4px}
+#login p{color:var(--muted-fg);font-size:13px}
+.err{color:var(--danger);font-size:13px;margin-top:10px}
+.toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--fg);color:#fff;padding:9px 16px;border-radius:10px;font-size:14px;z-index:30}
+/* 폰: 맨 끝에 둬야 위 규칙을 덮음 */
+@media (max-width:600px){header{padding:0 12px;gap:10px}header h1{font-size:15px}.desks{grid-template-columns:1fr 1fr;gap:50px 10px}.desk{padding:40px 8px 12px}.desk .rl{font-size:11px}.bubble{max-width:150px}}
+</style>
+</head>
+<body>
+
+<div id="login" class="hidden">
+  <h1>🌲 솔숲 사무실</h1>
+  <p>stay_msg 앱과 같은 계정으로 들어갑니다. 이 기기에서 처음 한 번만 로그인하면 됩니다.</p>
+  <form id="loginForm">
+    <label>이메일</label><input type="email" id="lEmail" autocomplete="username" required>
+    <label>비밀번호</label><input type="password" id="lPw" autocomplete="current-password" required>
+    <div class="row"><button class="btn primary" type="submit">들어가기</button></div>
+    <div class="err" id="lErr"></div>
+  </form>
+</div>
+
+<div id="app" class="hidden">
+  <header>
+    <h1>🌲 솔숲 사무실</h1>
+    <div class="counts" id="counts"></div>
+    <a href="https://msg.staysolsoop.kr/">← 앱으로</a>
+    <button class="link" id="logout">나가기</button>
+  </header>
+  <main>
+    <section id="boardCol">
+      <h2>작업 보드 <span style="flex:1"></span><button class="btn primary sm" id="newTask">+ 일 맡기기</button></h2>
+      <div id="board"></div>
+    </section>
+    <section id="officeCol">
+      <h2>사무실 <small>직원을 누르면 지침과 맡은 일이 보입니다</small></h2>
+      <div class="desks" id="desks"></div>
+      <p class="note">지금은 1단계(보는 사무실)입니다. 봇이 하는 일이 보드에 올라오고, 일감을 적고 옮길 수 있습니다.<br>
+      보드에 적은 일을 직원이 알아서 하는 건 2단계부터입니다. 게시·발송은 늘 「확인 대기」에서 쵸파파 승인 뒤에 합니다.</p>
+    </section>
+  </main>
+</div>
+
+<div id="ov" class="ov hidden"><div class="modal" id="modal"></div></div>
+
+<script>
+const SB_URL = 'https://yqzrxxepkxmxeukmsqeb.supabase.co';
+const SB_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlxenJ4eGVwa3hteGV1a21zcWViIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTMwMjM1MjgsImV4cCI6MjEwODU5OTUyOH0.outwfYIUJdGNKJ_Orw9GaiXX5MOCtnTUIy6FIqcdjbY';
+const sb = window.supabase.createClient(SB_URL, SB_ANON);
+const COLS = [['todo','할 일'],['doing','하는 중'],['review','확인 대기'],['done','끝']];
+const COLNAME = Object.fromEntries(COLS);
+const STATUS = {idle:'쉬는 중',working:'일하는 중',waiting:'확인 기다림',off:'퇴근'};
+const PEOPLE = {'lottopet@gmail.com':'쵸파파','withzoo2018@gmail.com':'쵸파맘'};
+let me = '', staff = [], tasks = [], openTask = null, showAllDone = false;
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const linkify = s => esc(s).replace(/https?:\/\/[^\s<]+/g, u => `<a href="${u}" target="_blank" rel="noopener">${u}</a>`);
+function ago(t){
+  const d = (Date.now() - new Date(t)) / 1000;
+  if (d < 60) return '방금'; if (d < 3600) return Math.floor(d/60) + '분 전'; if (d < 86400) return Math.floor(d/3600) + '시간 전';
+  const x = new Date(t); return `${x.getMonth()+1}/${x.getDate()}`;
+}
+function when(t){ const x = new Date(t); return `${x.getMonth()+1}/${x.getDate()} ${String(x.getHours()).padStart(2,'0')}:${String(x.getMinutes()).padStart(2,'0')}`; }
+function toast(m){ const d = document.createElement('div'); d.className = 'toast'; d.textContent = m; document.body.appendChild(d); setTimeout(() => d.remove(), 2200); }
+const sById = id => staff.find(s => s.id === id);
+
+async function load(){
+  const [a, b] = await Promise.all([
+    sb.from('office_staff').select('*').order('sort'),
+    sb.from('office_tasks').select('*').order('updated_at', {ascending:false}).limit(300)
+  ]);
+  if (a.error || b.error){ toast('불러오기 실패: ' + (a.error || b.error).message); return; }
+  staff = a.data; tasks = b.data; render();
+  if (openTask){ const t = tasks.find(x => x.id === openTask); if (t) showTask(t.id, true); }
+}
+function render(){
+  const n = c => tasks.filter(t => t.col === c).length;
+  $('#counts').innerHTML = `<span class="cnt">하는 중<b>${n('doing')}</b></span><span class="cnt ${n('review') ? 'wait' : ''}">확인 대기<b>${n('review')}</b></span><span class="cnt">할 일<b>${n('todo')}</b></span>`;
+  $('#board').innerHTML = COLS.map(([c, name]) => {
+    let list = tasks.filter(t => t.col === c);
+    const total = list.length;
+    if (c === 'done' && !showAllDone) list = list.slice(0, 5);
+    const body = list.length ? list.map(t => { const s = sById(t.staff_id);
+      return `<button class="task" data-id="${t.id}"><div class="t">${esc(t.title)}</div><div class="m"><span>${s ? esc(s.emoji + ' ' + s.name) : '맡은 직원 없음'}</span><span>${ago(t.updated_at)}</span>${t.created_by ? `<span>${esc(t.created_by)}</span>` : ''}</div></button>`; }).join('')
+      : `<div class="empty">${c === 'review' ? '쵸파파 확인을 기다리는 일이 없습니다.' : '없음'}</div>`;
+    const more = c === 'done' && total > 5 ? `<button class="more" id="moreDone">${showAllDone ? '접기' : `끝난 일 ${total}개 모두 보기`}</button>` : '';
+    return `<div class="col ${c}"><div class="col-h"><span>${name}</span><span class="n">${total}</span></div><div class="col-b">${body}${more}</div></div>`;
+  }).join('');
+  $('#desks').innerHTML = staff.map(s => {
+    const mine = tasks.filter(t => t.staff_id === s.id && t.col !== 'done').length;
+    return `<div class="desk ${s.status}" data-staff="${s.id}">${s.bubble ? `<div class="bubble" title="${esc(s.bubble)}">${esc(s.bubble)}</div>` : ''}<div class="av">${esc(s.emoji)}</div><div class="nm">${esc(s.name)}</div><div class="rl">${esc(s.role)}</div><span class="pill ${s.status}">${STATUS[s.status] || s.status}</span><div class="jobs">맡은 일 ${mine}개</div></div>`;
+  }).join('');
+}
+function openModal(html){ $('#modal').innerHTML = html; $('#ov').classList.remove('hidden'); }
+function closeModal(){ $('#ov').classList.add('hidden'); openTask = null; }
+$('#ov').addEventListener('click', e => { if (e.target.id === 'ov') closeModal(); });
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
+
+const staffOpts = sel => staff.map(s => `<option value="${s.id}" ${s.id === sel ? 'selected' : ''}>${esc(s.emoji + ' ' + s.name + ' — ' + s.role)}</option>`).join('');
+function newTask(){
+  openModal(`<h3>일 맡기기<button class="x" data-close>×</button></h3>
+    <label>무슨 일인가요</label><input type="text" id="nTitle" placeholder="예: 12월 첫 주 인스타 캡션 3개">
+    <label>자세히 (선택)</label><textarea id="nDetail" placeholder="원하는 것, 참고할 것, 기한"></textarea>
+    <label>누구에게</label><select id="nStaff">${staffOpts('manager')}</select>
+    <div class="row"><button class="btn primary" id="nGo">맡기기</button><button class="btn" data-close>취소</button></div>`);
+  $('#nTitle').focus();
+}
+async function addLog(task_id, text, staff_id){ await sb.from('office_log').insert({task_id, text, staff_id: staff_id || null, who: me}); }
+async function createTask(){
+  const title = $('#nTitle').value.trim(); if (!title){ $('#nTitle').focus(); return; }
+  const staff_id = $('#nStaff').value;
+  const {data, error} = await sb.from('office_tasks').insert({title, detail: $('#nDetail').value.trim(), staff_id, col:'todo', created_by: me}).select().single();
+  if (error){ toast('저장 실패: ' + error.message); return; }
+  await addLog(data.id, `${me}님이 ${sById(staff_id)?.name || ''}에게 맡김`, staff_id);
+  closeModal(); toast('맡겼습니다'); load();
+}
+async function showTask(id, keep){
+  const t = tasks.find(x => x.id === id); if (!t) return; openTask = id;
+  const {data: logs} = await sb.from('office_log').select('*').eq('task_id', id).order('at');
+  const ci = COLS.findIndex(c => c[0] === t.col);
+  const act = t.col === 'review'
+    ? `<button class="btn primary" data-move="done">승인 · 끝으로</button><button class="btn warn" data-move="doing">다시 하기</button>`
+    : `${ci > 0 ? `<button class="btn" data-move="${COLS[ci-1][0]}">← ${COLS[ci-1][1]}</button>` : ''}${ci < 3 ? `<button class="btn primary" data-move="${COLS[ci+1][0]}">${COLS[ci+1][1]} →</button>` : ''}`;
+  openModal(`<h3><span>${esc(t.title)}</span><button class="x" data-close>×</button></h3>
+    <div class="steps">${COLS.map(([c, nm]) => `<span class="${c === t.col ? 'on ' + c : ''}">${nm}</span>`).join('')}</div>
+    ${t.detail ? `<label>내용</label><div class="box">${linkify(t.detail)}</div>` : ''}
+    ${t.result ? `<label>결과</label><div class="box">${linkify(t.result)}</div>` : ''}
+    <label>맡은 직원</label><select id="tStaff">${staffOpts(t.staff_id)}</select>
+    <div class="row">${act}</div>
+    <label>기록</label><div class="logs">${(logs || []).map(l => `<div class="lg"><span class="w">${when(l.at)}</span><span>${esc(l.text)}</span></div>`).join('') || '<div class="empty">기록 없음</div>'}</div>
+    <div class="row"><input type="text" id="tNote" placeholder="메모 남기기" style="flex:1"><button class="btn" id="tNoteGo">남기기</button></div>
+    <div class="row" style="justify-content:space-between"><span style="font-size:12px;color:var(--muted-fg)">${esc(t.created_by || '')} · ${when(t.created_at)}</span><button class="btn danger sm" id="tDel">지우기</button></div>`);
+  $('#tStaff').onchange = async e => {
+    const s = e.target.value; await sb.from('office_tasks').update({staff_id: s}).eq('id', id);
+    await addLog(id, `${me}님이 ${sById(s)?.name}에게 다시 맡김`, s); load();
+  };
+  $('#tNoteGo').onclick = async () => { const v = $('#tNote').value.trim(); if (!v) return; await addLog(id, `${me}: ${v}`); showTask(id); };
+  $('#tDel').onclick = async e => {
+    if (e.target.dataset.sure){ await sb.from('office_tasks').delete().eq('id', id); closeModal(); toast('지웠습니다'); load(); return; }
+    e.target.dataset.sure = 1; e.target.textContent = '한 번 더 누르면 지워집니다';
+  };
+}
+async function moveTask(col){
+  const id = openTask, t = tasks.find(x => x.id === id);
+  const {error} = await sb.from('office_tasks').update({col}).eq('id', id);
+  if (error){ toast('옮기기 실패: ' + error.message); return; }
+  const msg = t.col === 'review' && col === 'done' ? `${me}님이 승인` : t.col === 'review' && col === 'doing' ? `${me}님이 다시 하기 요청` : `${me}님이 「${COLNAME[col]}」으로 옮김`;
+  await addLog(id, msg, t.staff_id); load();
+}
+function showStaff(id){
+  const s = sById(id); const mine = tasks.filter(t => t.staff_id === id && t.col !== 'done');
+  openModal(`<h3><span>${esc(s.emoji)} ${esc(s.name)} <small style="font-weight:500;color:var(--muted-fg);font-size:14px">${esc(s.role)}</small></span><button class="x" data-close>×</button></h3>
+    <span class="pill ${s.status}">${STATUS[s.status]}</span>${s.bubble ? ` <span style="font-size:13px;color:var(--muted-fg)">「${esc(s.bubble)}」</span>` : ''}
+    <label>지침 (이 직원이 늘 지키는 것)</label><textarea id="sGuide" style="min-height:160px">${esc(s.guide)}</textarea>
+    <div class="row"><button class="btn primary" id="sSave">지침 저장</button></div>
+    <label>맡은 일</label><div class="col-b" style="padding:0">${mine.map(t => `<button class="task" data-id="${t.id}"><div class="t">${esc(t.title)}</div><div class="m"><span>${COLNAME[t.col]}</span><span>${ago(t.updated_at)}</span></div></button>`).join('') || '<div class="empty">없음</div>'}</div>`);
+  $('#sSave').onclick = async () => { const {error} = await sb.from('office_staff').update({guide: $('#sGuide').value}).eq('id', id); toast(error ? '저장 실패: ' + error.message : '지침을 저장했습니다'); load(); };
+}
+document.addEventListener('click', e => {
+  const c = e.target.closest('[data-close]'); if (c){ closeModal(); return; }
+  const tk = e.target.closest('.task'); if (tk){ showTask(+tk.dataset.id); return; }
+  const dk = e.target.closest('.desk'); if (dk){ showStaff(dk.dataset.staff); return; }
+  const mv = e.target.closest('[data-move]'); if (mv){ moveTask(mv.dataset.move); return; }
+  if (e.target.id === 'moreDone'){ showAllDone = !showAllDone; render(); return; }
+  if (e.target.id === 'nGo'){ createTask(); return; }
+});
+$('#newTask').onclick = newTask;
+$('#logout').onclick = async () => { await sb.auth.signOut(); location.reload(); };
+$('#loginForm').onsubmit = async e => {
+  e.preventDefault(); $('#lErr').textContent = '';
+  const {error} = await sb.auth.signInWithPassword({email: $('#lEmail').value.trim(), password: $('#lPw').value});
+  if (error){ $('#lErr').textContent = '들어가지 못했습니다: ' + error.message; return; }
+  start();
+};
+let timer = null, chan = null;
+async function start(){
+  const {data} = await sb.auth.getSession();
+  if (!data.session){ $('#login').classList.remove('hidden'); $('#app').classList.add('hidden'); return; }
+  me = PEOPLE[data.session.user.email] || data.session.user.email;
+  $('#login').classList.add('hidden'); $('#app').classList.remove('hidden');
+  await load();
+  let deb = null; const again = () => { clearTimeout(deb); deb = setTimeout(load, 400); };
+  if (!chan) chan = sb.channel('office').on('postgres_changes', {event:'*', schema:'public', table:'office_tasks'}, again)
+    .on('postgres_changes', {event:'*', schema:'public', table:'office_staff'}, again).subscribe();
+  if (!timer) timer = setInterval(load, 30000);   // 실시간 연결이 끊겨도 30초마다 새로
+}
+start();
+</script>
+</body>
+</html>
