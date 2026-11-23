@@ -357,22 +357,27 @@ async function meatParty(){
 }
 // ---------- 놀이방 ----------
 let gameOn = false, gameTimer = null, pick = null, pos = {};
-// 배경(솔숲 스케치) 위 어디든 자유롭게 — 하늘·먼 산(위쪽)만 빼고 솔숲 주변 전체(%, 발 위치)
-const FIELD = {x1: 3, x2: 96, y1: 38, y2: 97};
+// 배경(솔숲 스케치) 위 솔숲 마당·길·건물 둘레를 자유롭게(구역 없음). 숲·먼 산으로는 안 감(11-23 쵸파파)
 const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
-const bounce = (v, a, b) => v < a ? a + (a - v) : v > b ? b - (v - b) : v;   // 가장자리에 닿으면 되튐(구석에 몰리지 않게)
-// 다른 캐릭터와 떨어진 자리를 고름: 후보 10개 중 가장 가까운 캐릭터와의 거리가 가장 먼 곳
+const onGround = p => p.y >= 44 && ((p.x - 54) / 44) ** 2 + ((p.y - 71) / 27) ** 2 <= 1   // 부지 타원 안
+  && !(p.x > 17 && p.x < 54 && p.y > 46 && p.y < 67);   // 숙소 지붕·건물 위는 빼고
+const FAV = {manager: {x: 55, y: 46}, review: {x: 72, y: 70}};   // 쵸파는 우리 집, 밀크는 마당. 고양이는 관리동 고양이 집 근처를 좋아함
+const favOf = s => FAV[s.id] || {x: 76, y: 51};
+const BUDDY = {channel: 'writer', sms: 'writer', design: 'writer', writer: 'design', insta: 'manager', manager: 'review', review: 'manager'};   // 교자네 가족끼리 붙어 다님
 function spot(from, sid){
-  const others = Object.entries(pos).filter(([k]) => k !== sid).map(([, p]) => p);
-  let best = null, bestD = -1;
-  for (let i = 0; i < 10; i++){
-    const c = from
-      ? {x: clamp(bounce(from.x + (Math.random() - .5) * 30, FIELD.x1, FIELD.x2), FIELD.x1, FIELD.x2), y: clamp(bounce(from.y + (Math.random() - .5) * 20, FIELD.y1, FIELD.y2), FIELD.y1, FIELD.y2)}
-      : {x: FIELD.x1 + Math.random() * (FIELD.x2 - FIELD.x1), y: FIELD.y1 + Math.random() * (FIELD.y2 - FIELD.y1)};
-    const d = others.length ? Math.min(...others.map(o => Math.hypot(o.x - c.x, (o.y - c.y) * 1.5))) : 99;
-    if (d > bestD){ best = c; bestD = d; }
+  const s = sById(sid) || {};
+  for (let i = 0; i < 20; i++){
+    let c;
+    const r = Math.random();
+    if (!from) c = {x: 15 + Math.random() * 75, y: 58 + Math.random() * 36};
+    else if (r < 0.25 && BUDDY[sid] && pos[BUDDY[sid]]){ const b = pos[BUDDY[sid]]; c = {x: b.x + (Math.random() < .5 ? -1 : 1) * (5 + Math.random() * 4), y: b.y + (Math.random() - .5) * 5}; }   // 친구 옆으로
+    else if (r < 0.35){ const f = favOf(s); c = {x: f.x + (Math.random() - .5) * 12, y: f.y + (Math.random() - .5) * 6}; }   // 좋아하는 곳
+    else c = {x: from.x + (Math.random() - .5) * 24, y: from.y + (Math.random() - .5) * 14};   // 근처 산책
+    c.x = clamp(c.x, 4, 96); c.y = clamp(c.y, 44, 97);
+    const crowded = Object.entries(pos).some(([k, p]) => k !== sid && Math.hypot(p.x - c.x, (p.y - c.y) * 1.5) < 7);   // 겹치지만 않게
+    if (onGround(c) && !crowded) return c;
   }
-  return best;
+  return from || {x: 60, y: 70};
 }
 const busy = {};   // 걷는 중인 캐릭터(도착 시각)
 const SOUND = {cat:['야옹~', '냥!', '냐아옹', '골골골…', '하암~'], dog:['멍!', '왈왈!', '멍멍~', '헥헥', '킁킁…']};
