@@ -159,7 +159,7 @@ const COLNAME = Object.fromEntries(COLS);
 const STATUS = {idle:'쉬는 중',working:'일하는 중',waiting:'확인 기다림',off:'퇴근'};
 const PEOPLE = {'lottopet@gmail.com':'쵸파파','withzoo2018@gmail.com':'쵸파맘'};
 const RS = {queued:['대기',''], running:['실행 중','running'], error:['막힘','error']};
-let me = '', staff = [], tasks = [], openTask = null, showAllDone = false, runsToday = 0;
+let me = '', staff = [], tasks = [], openTask = null, showAllDone = false, runsToday = 0, loadSeq = 0, showSeq = 0;
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const linkify = s => esc(s).replace(/https?:\/\/[^\s<]+/g, u => `<a href="${u}" target="_blank" rel="noopener">${u}</a>`);
@@ -171,16 +171,18 @@ function ago(t){
 function when(t){ const x = new Date(t); return `${x.getMonth()+1}/${x.getDate()} ${String(x.getHours()).padStart(2,'0')}:${String(x.getMinutes()).padStart(2,'0')}`; }
 function toast(m){ const d = document.createElement('div'); d.className = 'toast'; d.textContent = m; document.body.appendChild(d); setTimeout(() => d.remove(), 2200); }
 const sById = id => staff.find(s => s.id === id);
-const runTag = t => `${RS[t.run_state] ? `<span class="rs ${RS[t.run_state][1]}">${RS[t.run_state][0]}</span>` : ''}${t.runs > 0 ? `<span>${t.runs}회</span>` : ''}`;
+const runTag = t => `${RS[t.run_state] ? `<span class="rs ${RS[t.run_state][1]}">${RS[t.run_state][0]}</span>` : ''}${t.runs > 0 ? `<span>${esc(t.runs)}회</span>` : ''}`;
 function kstToday(){ const k = new Date(Date.now() + 9*3600e3); k.setUTCHours(0, 0, 0, 0); return new Date(k - 9*3600e3).toISOString(); }
 const ckCls = s => s.includes('고친 뒤') ? 'ok2' : /고칠 것|못 함/.test(s) ? 'warn' : s.includes('생략') ? '' : s.includes('통과') ? 'ok' : '';
 
 async function load(){
+  const seq = ++loadSeq;   // 늦게 도착한 오래된 응답은 버린다
   const [a, b, c] = await Promise.all([
     sb.from('office_staff').select('*').order('sort'),
     sb.from('office_tasks').select('*').order('updated_at', {ascending:false}).limit(300),
     sb.from('office_log').select('*', {count:'exact', head:true}).eq('who', '러너').like('text', '%일을 집어 감').gte('at', kstToday())
   ]);
+  if (seq !== loadSeq) return;
   if (a.error || b.error){ toast('불러오기 실패: ' + (a.error || b.error).message); return; }
   staff = a.data; tasks = b.data; runsToday = c.error ? '–' : (c.count || 0); render(); sched();
   if (openTask){ const t = tasks.find(x => x.id === openTask); if (t) showTask(t.id, true); }
@@ -193,22 +195,22 @@ function render(){
     const total = list.length;
     if (c === 'done' && !showAllDone) list = list.slice(0, 5);
     const body = list.length ? list.map(t => { const s = sById(t.staff_id);
-      return `<button class="task" data-id="${t.id}"><div class="t">${esc(t.title)}</div><div class="m">${runTag(t)}<span>${s ? esc(s.emoji + ' ' + s.name) : '맡은 직원 없음'}</span><span>${ago(t.updated_at)}</span>${t.created_by ? `<span>${esc(t.created_by)}</span>` : ''}</div></button>`; }).join('')
+      return `<button class="task" data-id="${esc(t.id)}"><div class="t">${esc(t.title)}</div><div class="m">${runTag(t)}<span>${s ? esc(s.emoji + ' ' + s.name) : '맡은 직원 없음'}</span><span>${ago(t.updated_at)}</span>${t.created_by ? `<span>${esc(t.created_by)}</span>` : ''}</div></button>`; }).join('')
       : `<div class="empty">${c === 'review' ? '쵸파파 확인을 기다리는 일이 없습니다.' : '없음'}</div>`;
     const more = c === 'done' && total > 5 ? `<button class="more" id="moreDone">${showAllDone ? '접기' : `끝난 일 ${total}개 모두 보기`}</button>` : '';
     return `<div class="col ${c}"><div class="col-h"><span>${name}</span><span class="n">${total}</span></div><div class="col-b">${body}${more}</div></div>`;
   }).join('');
   $('#desks').innerHTML = staff.map(s => {
     const mine = tasks.filter(t => t.staff_id === s.id && t.col !== 'done').length;
-    return `<div class="desk ${s.status}" data-staff="${s.id}">${s.bubble ? `<div class="bubble" title="${esc(s.bubble)}">${esc(s.bubble)}</div>` : ''}<div class="av">${s.avatar ? `<img src="${esc(s.avatar)}" alt="${esc(s.name)}">` : esc(s.emoji)}</div><div class="nm">${esc(s.name)}</div><div class="rl">${esc(s.role)}</div><span class="pill ${s.status}">${STATUS[s.status] || s.status}</span><div class="jobs">맡은 일 ${mine}개</div></div>`;
+    return `<div class="desk ${esc(s.status)}" data-staff="${esc(s.id)}">${s.bubble ? `<div class="bubble" title="${esc(s.bubble)}">${esc(s.bubble)}</div>` : ''}<div class="av">${s.avatar ? `<img src="${esc(s.avatar)}" alt="${esc(s.name)}">` : esc(s.emoji)}</div><div class="nm">${esc(s.name)}</div><div class="rl">${esc(s.role)}</div><span class="pill ${esc(s.status)}">${esc(STATUS[s.status] || s.status)}</span><div class="jobs">맡은 일 ${mine}개</div></div>`;
   }).join('');
 }
 function openModal(html){ $('#modal').innerHTML = html; $('#ov').classList.remove('hidden'); }
-function closeModal(){ $('#ov').classList.add('hidden'); openTask = null; }
+function closeModal(){ $('#ov').classList.add('hidden'); openTask = null; showSeq++; }
 $('#ov').addEventListener('click', e => { if (e.target.id === 'ov') closeModal(); });
 document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
 
-const staffOpts = sel => staff.map(s => `<option value="${s.id}" ${s.id === sel ? 'selected' : ''}>${esc(s.emoji + ' ' + s.name + ' — ' + s.role)}</option>`).join('');
+const staffOpts = sel => staff.map(s => `<option value="${esc(s.id)}" ${s.id === sel ? 'selected' : ''}>${esc(s.emoji + ' ' + s.name + ' — ' + s.role)}</option>`).join('');
 function newTask(){
   openModal(`<h3>일 맡기기<button class="x" data-close>×</button></h3>
     <label>무슨 일인가요</label><input type="text" id="nTitle" placeholder="예: 12월 첫 주 인스타 캡션 3개">
@@ -218,7 +220,15 @@ function newTask(){
     <div class="row"><button class="btn primary" id="nGo">맡기기</button><button class="btn" data-close>취소</button></div>`);
   $('#nTitle').focus();
 }
-async function addLog(task_id, text, staff_id){ await sb.from('office_log').insert({task_id, text, staff_id: staff_id || null, who: me}); }
+async function addLog(task_id, text, staff_id){ const {error} = await sb.from('office_log').insert({task_id, text, staff_id: staff_id || null, who: me}); return error; }
+// 기대 상태 조건부 갱신(cond 로 eq 등을 붙임). 0행이면 다른 곳에서 먼저 바뀐 것 → 알리고 새로고침
+async function updIf(id, body, cond, what){
+  const {data, error} = await cond(sb.from('office_tasks').update(body).eq('id', id)).select('id');
+  if (error){ toast(what + ' 실패: ' + error.message); return false; }
+  if (!data.length){ toast('다른 곳에서 먼저 바뀌었습니다'); load(); return false; }
+  return true;
+}
+const notRunning = qq => qq.or('run_state.is.null,run_state.neq.running');
 async function createTask(){
   const title = $('#nTitle').value.trim(); if (!title){ $('#nTitle').focus(); return; }
   const staff_id = $('#nStaff').value;
@@ -231,14 +241,18 @@ async function createTask(){
 }
 async function showTask(id, keep){
   const t = tasks.find(x => x.id === id); if (!t) return; openTask = id;
+  const seq = ++showSeq;
   const {data: logs} = await sb.from('office_log').select('*').eq('task_id', id).order('at');
+  if (seq !== showSeq) return;   // 그사이 다른 카드를 열었거나 창을 닫음
+  const running = t.run_state === 'running';
   const ci = COLS.findIndex(c => c[0] === t.col);
   const redoKeep = keep && $('#tRedo') ? $('#tRedo').value : '';
-  const act = t.run_state === 'running'
+  const did = `data-id="${esc(t.id)}"`, mvAttr = `${did} data-from="${esc(t.col)}"`;   // 버튼은 표시한 카드 id·칸을 들고 간다
+  const act = running
     ? `<span class="hint">직원이 일하는 중입니다</span>`
     : t.col === 'review'
-    ? `<button class="btn primary" data-move="done">승인 · 끝으로</button><input type="text" id="tRedo" placeholder="다시 할 때 메모 (선택)" value="${esc(redoKeep)}" style="flex:1;min-width:160px"><button class="btn warn" id="tRedoGo">다시 하기</button>`
-    : `${ci > 0 ? `<button class="btn" data-move="${COLS[ci-1][0]}">← ${COLS[ci-1][1]}</button>` : ''}${ci < 3 ? `<button class="btn primary" data-move="${COLS[ci+1][0]}">${COLS[ci+1][1]} →</button>` : ''}${t.run_state === 'error' ? `<button class="btn warn" id="tRetry">다시 시도</button>` : ''}${t.run_state === 'queued' ? `<button class="btn" id="tUnqueue">바로 시작 취소</button>` : ''}`;
+    ? `<button class="btn primary" data-move="done" ${mvAttr}>승인 · 끝으로</button><input type="text" id="tRedo" placeholder="다시 할 때 메모 (선택)" value="${esc(redoKeep)}" style="flex:1;min-width:160px"><button class="btn warn" id="tRedoGo" ${did}>다시 하기</button>`
+    : `${ci > 0 ? `<button class="btn" data-move="${COLS[ci-1][0]}" ${mvAttr}>← ${COLS[ci-1][1]}</button>` : ''}${ci < 3 ? `<button class="btn primary" data-move="${COLS[ci+1][0]}" ${mvAttr}>${COLS[ci+1][1]} →</button>` : ''}${t.run_state === 'error' ? `<button class="btn warn" id="tRetry" ${did}>다시 시도</button>` : ''}${t.run_state === 'queued' ? `<button class="btn" id="tUnqueue" ${did}>바로 시작 취소</button>` : ''}`;
   let res = t.result || '', ck = '';
   const first = res.split('\n')[0].trim();
   if (/^검수(:| 못 함| 생략)/.test(first)){
@@ -250,60 +264,60 @@ async function showTask(id, keep){
     ${t.parent_id ? `<div class="sub">#${esc(t.parent_id)}에서 나눠 맡은 일</div>` : ''}
     ${t.detail ? `<label>내용</label><div class="box">${linkify(t.detail)}</div>` : ''}
     ${t.result ? `<label>결과</label>${ck}${res ? `<div class="box">${linkify(res)}</div>` : ''}` : ''}
-    <label>맡은 직원</label><select id="tStaff">${staffOpts(t.staff_id)}</select>
+    <label>맡은 직원</label><select id="tStaff" ${running ? 'disabled' : ''}>${staffOpts(t.staff_id)}</select>${running ? '<div class="sub">실행 중에는 담당 직원을 바꿀 수 없습니다. 끝나면 바꿔 주세요.</div>' : ''}
     <div class="row">${act}</div>
     <label>기록</label><div class="logs">${(logs || []).map(l => `<div class="lg"><span class="w">${when(l.at)}</span><span>${esc(l.text)}</span></div>`).join('') || '<div class="empty">기록 없음</div>'}</div>
     <div class="row"><input type="text" id="tNote" placeholder="메모 남기기" style="flex:1"><button class="btn" id="tNoteGo">남기기</button></div>
     <div class="row" style="justify-content:space-between"><span style="font-size:12px;color:var(--muted-fg)">${esc(t.created_by || '')} · ${when(t.created_at)}</span><button class="btn danger sm" id="tDel">지우기</button></div>`);
   $('#tStaff').onchange = async e => {
-    const s = e.target.value; await sb.from('office_tasks').update({staff_id: s}).eq('id', id);
+    const s = e.target.value;
+    if (!await updIf(id, {staff_id: s}, notRunning, '다시 맡기기')) return;
     await addLog(id, `${me}님이 ${sById(s)?.name}에게 다시 맡김`, s); load();
   };
   $('#tNoteGo').onclick = async () => { const v = $('#tNote').value.trim(); if (!v) return; await addLog(id, `${me}: ${v}`); showTask(id); };
-  if ($('#tRedoGo')) $('#tRedoGo').onclick = async () => {
+  if ($('#tRedoGo')) $('#tRedoGo').onclick = async e => {
+    const b = e.currentTarget, rid = +b.dataset.id; b.disabled = true;   // 한 번만
     const memo = $('#tRedo').value.trim();
-    await addLog(id, memo ? `다시 하기: ${memo}` : '다시 하기 요청(메모 없음)', t.staff_id);   // 러너가 메모를 읽으므로 기록 먼저
-    const {error} = await sb.from('office_tasks').update(t.run_state ? {col:'todo', run_state:'queued'} : {col:'doing'}).eq('id', id);
-    if (error){ toast('다시 하기 실패: ' + error.message); return; }
+    const err = await addLog(rid, memo ? `다시 하기: ${memo}` : '다시 하기 요청(메모 없음)', t.staff_id);   // 러너가 메모를 읽으므로 기록 먼저
+    if (err){ toast('메모 저장 실패 — 다시 하지 않았습니다: ' + err.message); b.disabled = false; return; }
+    if (!await updIf(rid, t.run_state ? {col:'todo', run_state:'queued'} : {col:'doing'}, qq => qq.eq('col', 'review'), '다시 하기')){ b.disabled = false; return; }
     $('#tRedo').value = ''; load();
   };
-  if ($('#tRetry')) $('#tRetry').onclick = async () => {
-    const {error} = await sb.from('office_tasks').update({run_state:'queued', attempts:0, col:'todo'}).eq('id', id);
-    if (error){ toast('다시 시도 실패: ' + error.message); return; }
-    await addLog(id, '다시 시도', t.staff_id); load();
+  if ($('#tRetry')) $('#tRetry').onclick = async e => {
+    const rid = +e.currentTarget.dataset.id;
+    if (!await updIf(rid, {run_state:'queued', attempts:0, col:'todo'}, qq => qq.eq('run_state', 'error'), '다시 시도')) return;
+    await addLog(rid, '다시 시도', t.staff_id); load();
   };
-  if ($('#tUnqueue')) $('#tUnqueue').onclick = async () => {
-    const {data, error} = await sb.from('office_tasks').update({run_state:null}).eq('id', id).eq('run_state', 'queued').select();
-    if (error){ toast('취소 실패: ' + error.message); return; }
-    if (!data.length){ toast('직원이 이미 시작했습니다'); load(); return; }
-    await addLog(id, '바로 시작 취소', t.staff_id); load();
+  if ($('#tUnqueue')) $('#tUnqueue').onclick = async e => {
+    const rid = +e.currentTarget.dataset.id;
+    if (!await updIf(rid, {run_state:null}, qq => qq.eq('run_state', 'queued'), '취소')) return;
+    await addLog(rid, '바로 시작 취소', t.staff_id); load();
   };
   $('#tDel').onclick = async e => {
     if (e.target.dataset.sure){ await sb.from('office_tasks').delete().eq('id', id); closeModal(); toast('지웠습니다'); load(); return; }
     e.target.dataset.sure = 1; e.target.textContent = '한 번 더 누르면 지워집니다';
   };
 }
-async function moveTask(col){
-  const id = openTask, t = tasks.find(x => x.id === id);
-  const {error} = await sb.from('office_tasks').update({col}).eq('id', id);
-  if (error){ toast('옮기기 실패: ' + error.message); return; }
-  const msg = t.col === 'review' && col === 'done' ? `${me}님이 승인` : `${me}님이 「${COLNAME[col]}」으로 옮김`;
-  await addLog(id, msg, t.staff_id); load();
+async function moveTask(col, id, from){   // id·from = 버튼이 들고 온 표시한 카드 id와 그때 칸
+  const t = tasks.find(x => x.id === id);
+  if (!await updIf(id, {col}, qq => notRunning(qq.eq('col', from)), '옮기기')) return;
+  const msg = from === 'review' && col === 'done' ? `${me}님이 승인` : `${me}님이 「${COLNAME[col]}」으로 옮김`;
+  await addLog(id, msg, t?.staff_id); load();
 }
 function showStaff(id){
   const s = sById(id); const mine = tasks.filter(t => t.staff_id === id && t.col !== 'done');
   openModal(`<h3><span>${esc(s.emoji)} ${esc(s.name)} <small style="font-weight:500;color:var(--muted-fg);font-size:14px">${esc(s.role)}</small></span><button class="x" data-close>×</button></h3>
-    ${s.pet ? `<div style="font-size:13px;color:var(--muted-fg);margin-bottom:8px">${esc(s.pet)}</div>` : ''}<span class="pill ${s.status}">${STATUS[s.status]}</span>${s.bubble ? ` <span style="font-size:13px;color:var(--muted-fg)">「${esc(s.bubble)}」</span>` : ''}
+    ${s.pet ? `<div style="font-size:13px;color:var(--muted-fg);margin-bottom:8px">${esc(s.pet)}</div>` : ''}<span class="pill ${esc(s.status)}">${esc(STATUS[s.status] || s.status)}</span>${s.bubble ? ` <span style="font-size:13px;color:var(--muted-fg)">「${esc(s.bubble)}」</span>` : ''}
     <label>지침 (이 직원이 늘 지키는 것)</label><textarea id="sGuide" style="min-height:160px">${esc(s.guide)}</textarea>
     <div class="row"><button class="btn primary" id="sSave">지침 저장</button></div>
-    <label>맡은 일</label><div class="col-b" style="padding:0">${mine.map(t => `<button class="task" data-id="${t.id}"><div class="t">${esc(t.title)}</div><div class="m"><span>${COLNAME[t.col]}</span><span>${ago(t.updated_at)}</span></div></button>`).join('') || '<div class="empty">없음</div>'}</div>`);
+    <label>맡은 일</label><div class="col-b" style="padding:0">${mine.map(t => `<button class="task" data-id="${esc(t.id)}"><div class="t">${esc(t.title)}</div><div class="m"><span>${COLNAME[t.col]}</span><span>${ago(t.updated_at)}</span></div></button>`).join('') || '<div class="empty">없음</div>'}</div>`);
   $('#sSave').onclick = async () => { const {error} = await sb.from('office_staff').update({guide: $('#sGuide').value}).eq('id', id); toast(error ? '저장 실패: ' + error.message : '지침을 저장했습니다'); load(); };
 }
 document.addEventListener('click', e => {
   const c = e.target.closest('[data-close]'); if (c){ closeModal(); return; }
   const tk = e.target.closest('.task'); if (tk){ showTask(+tk.dataset.id); return; }
   const dk = e.target.closest('.desk'); if (dk){ showStaff(dk.dataset.staff); return; }
-  const mv = e.target.closest('[data-move]'); if (mv){ moveTask(mv.dataset.move); return; }
+  const mv = e.target.closest('[data-move]'); if (mv){ moveTask(mv.dataset.move, +mv.dataset.id, mv.dataset.from); return; }
   if (e.target.id === 'moreDone'){ showAllDone = !showAllDone; render(); return; }
   if (e.target.id === 'nGo'){ createTask(); return; }
 });
