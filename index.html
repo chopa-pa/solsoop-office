@@ -339,7 +339,7 @@ async function feed(sid){
   }
   await sb.from('office_chat').insert({staff_id: sid, role:'staff', who: s.name, text: `${snack[0].split(' ')[0]} ${line}`});
   toast(`${s.name}에게 ${snack[1]}를 줬습니다`); load();
-  if (gameOn){ say(sid, line, 3500, true); } else { speak(line, sid); openChat(sid, true); }
+  if (gameOn){ say(sid, line, 3500, true); } else { openChat(sid, true); }
 }
 async function meatParty(){
   const b = $('#meatGo'); b.disabled = true;
@@ -394,15 +394,18 @@ const PET = {   // 쓰다듬기 반응
   cat:['골골골… 좋아요.', '거기 말고 턱 밑이요.', '냥… 한 번만 더.'], dog:['꼬리 흔드는 중!', '헥헥, 더 해 주세요!', '배도 긁어 주세요 멍!']
 };
 let voiceOn = (() => { try { return localStorage.getItem('voice') === 'on'; } catch { return false; } })();   // 소리는 기본 끔(놀이방에서 켬)
-const VOICE = {manager:[1.3,1.05], review:[1.5,1.0], insta:[0.8,0.95], writer:[1.2,1.05], channel:[1.0,1.0], sms:[1.6,1.1], design:[1.4,1.0]};
-function speak(text, sid){   // 짧은 말만 소리로(브라우저 음성, 무료)
-  if (!voiceOn || !window.speechSynthesis || !text || text.length > 140) return;
-  const u = new SpeechSynthesisUtterance(text.replace(/[#*`>|\-]/g, ' ').replace(/[\u{1F300}-\u{1FAFF}\u2600-\u27BF]/gu, ''));
-  u.lang = 'ko-KR'; const [pi, ra] = VOICE[sid] || [1, 1]; u.pitch = pi; u.rate = ra;
-  const ko = speechSynthesis.getVoices().find(v => v.lang && v.lang.startsWith('ko')); if (ko) u.voice = ko;
-  speechSynthesis.cancel(); speechSynthesis.speak(u);
+// 목소리: 서버가 OpenAI 음성으로 만든 mp3(office_chat.audio)만 재생. 브라우저 기계음은 안 씀(11-23 쵸파파)
+const CLIP = {};   // 놀이방 고정 대사 음성(site/game/voice/, 크레딧 생기면 만듦) — 「sid|대사」 → 파일
+const audioQ = []; let audioOn = null;
+function playUrl(url){
+  if (!voiceOn || !url) return;
+  audioQ.push(url); if (audioOn) return;
+  const next = () => { const u = audioQ.shift(); if (!u){ audioOn = null; return; } audioOn = new Audio(u); audioOn.onended = audioOn.onerror = next; audioOn.play().catch(next); };
+  next();
 }
-function setVoiceBtn(){ $('#voiceBtn').textContent = voiceOn ? '🔊 소리 켬' : '🔇 소리 끔'; }
+function speak(text, sid){ const f = CLIP[sid + '|' + text]; if (f) playUrl(f); }
+function setVoiceBtn(){ document.querySelectorAll('.voiceBtn,#voiceBtn').forEach(b => b.textContent = voiceOn ? '🔊 목소리 켬' : '🔇 목소리 끔'); }
+function toggleVoice(){ voiceOn = !voiceOn; try { localStorage.setItem('voice', voiceOn ? 'on' : 'off'); } catch {} setVoiceBtn(); if (!voiceOn){ audioQ.length = 0; audioOn?.pause(); audioOn = null; } }
 function openGame(){
   gameOn = true; $('#game').classList.remove('hidden'); setVoiceBtn();
   const room = $('#room'); room.querySelectorAll('.pet').forEach(e => e.remove());
@@ -415,7 +418,7 @@ function openGame(){
   renderRank(); renderPick();
   clearInterval(gameTimer); gameTimer = setInterval(gameStep, 1600);
 }
-function closeGame(){ gameOn = false; clearInterval(gameTimer); $('#game').classList.add('hidden'); try { speechSynthesis.cancel(); } catch {} }
+function closeGame(){ gameOn = false; clearInterval(gameTimer); $('#game').classList.add('hidden'); audioQ.length = 0; audioOn?.pause(); audioOn = null; }
 function say(sid, text, ms = 3200, voice = false){
   const d = document.querySelector(`.pet[data-pet="${sid}"]`); if (!d) return;
   d.querySelector('.say')?.remove(); const b = document.createElement('div'); b.className = 'say'; b.textContent = text; d.appendChild(b);
@@ -633,10 +636,9 @@ async function openChat(sid, keep){
   };
   const inner = (msgs.map(bub).join('') || `<div class="empty">${esc(s.name)}에게 하고 싶은 말을 적어 보세요. 일을 정하면 「이대로 맡기기」 버튼이 나옵니다.</div>`)
     + (chatThinking ? `<div class="msg think">${team ? '직원들이 답하는 중…' : esc(s.name) + (/[가-힣]/.test(s.name.slice(-1)) && (s.name.slice(-1).charCodeAt(0) - 0xAC00) % 28 ? '이' : '가') + ' 생각하는 중…'}</div>` : '');
-  // 새로 온 짧은 직원 말은 소리로(열어 둔 창에서만, 처음 열 때 옛말은 안 읽음)
-  const lastStaff = msgs.filter(m => m.role === 'staff').pop();
-  if (lastStaff && wasOpen && chatHeard[sid] && lastStaff.id > chatHeard[sid]) speak(lastStaff.text, lastStaff.staff_id);
-  if (lastStaff) chatHeard[sid] = lastStaff.id; else chatHeard[sid] = chatHeard[sid] || 1;
+  // 새로 온 직원 말의 목소리 재생(열어 둔 창에서만, 처음 열 때 있던 말은 안 틂). 목소리 파일은 글보다 몇 초 늦게 붙음
+  if (!wasOpen) chatHeard[sid] = new Set(msgs.filter(m => m.audio).map(m => m.id));
+  else msgs.filter(m => m.role === 'staff' && m.audio && !chatHeard[sid].has(m.id)).forEach(m => { chatHeard[sid].add(m.id); playUrl(m.audio); });
   // 이미 열린 대화 창이면 말 목록만 바꾼다 — 입력 칸을 다시 그리면 치던 글(한글 조합)·커서가 튕김(11-23 쵸파파)
   if (wasOpen && box && $('#cIn')){
     if (chatHtml !== inner){ chatHtml = inner; box.innerHTML = inner; if (atEnd) box.scrollTop = box.scrollHeight; }
@@ -646,7 +648,8 @@ async function openChat(sid, keep){
     ${team ? '' : `<div class="treats"><button class="btn sm" id="cFeed">${SNACK[s.species || 'cat'][0]} 주기</button>${gaugeHtml(s).replace('class="gauges"', 'class="gauges" style="margin:0;flex:1;max-width:160px"')}</div>`}
     <div class="chat" id="cBox">${chatHtml = inner}</div>
     <textarea id="cIn" placeholder="${team ? '이름을 부르면 그 직원이, 「다들」이라고 하면 모두 답합니다. 부르지 않으면 쵸파가 답합니다.' : '예) 오늘 눈 온 거로 릴스 하나 만들자. 답을 기다리는 동안에도 더 적어 보내도 됩니다.'}" style="min-height:70px"></textarea>
-    <div class="row"><button class="btn primary" id="cGo">보내기</button><span class="hint" style="font-size:12px">Ctrl+Enter로도 보냅니다</span><span style="flex:1"></span>${team ? '' : `<button class="btn sm" data-cfg="${esc(sid)}">지침 보기</button>`}</div>`);
+    <div class="row"><button class="btn primary" id="cGo">보내기</button><span class="hint" style="font-size:12px">Ctrl+Enter로도 보냅니다</span><span style="flex:1"></span><button class="btn sm voiceBtn" data-voice="1"></button>${team ? '' : `<button class="btn sm" data-cfg="${esc(sid)}">지침 보기</button>`}</div>`);
+  setVoiceBtn();
   const nb = $('#cBox'); nb.scrollTop = nb.scrollHeight;
   const send = async () => {
     const text = $('#cIn').value.trim(); if (!text) return;
@@ -657,6 +660,7 @@ async function openChat(sid, keep){
     $('#cIn').value = ''; $('#cBox').scrollTop = 1e9; openChat(sid, true);
   };
   $('#cGo').onclick = send;
+  document.querySelector('[data-voice]').onclick = toggleVoice;
   if ($('#cFeed')) $('#cFeed').onclick = () => feed(sid);
   $('#cIn').onkeydown = e => { if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)){ e.preventDefault(); send(); } };
 }
@@ -702,7 +706,7 @@ $('#staffCfg').onclick = staffList;
 $('#teamBtn').onclick = () => openChat('team');
 $('#gameBtn').onclick = openGame;
 $('#gameBack').onclick = closeGame;
-$('#voiceBtn').onclick = () => { voiceOn = !voiceOn; try { localStorage.setItem('voice', voiceOn ? 'on' : 'off'); } catch {} setVoiceBtn(); if (voiceOn) speak('소리를 켰습니다', 'manager'); };
+$('#voiceBtn').onclick = toggleVoice;
 $('#logout').onclick = async () => { await sb.auth.signOut(); location.reload(); };
 $('#loginForm').onsubmit = async e => {
   e.preventDefault(); $('#lErr').textContent = '';
