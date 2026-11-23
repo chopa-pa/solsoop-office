@@ -408,7 +408,7 @@ function speak(text, sid){ const f = CLIP[sid + '|' + text]; if (f) playUrl(f); 
 function setVoiceBtn(){ document.querySelectorAll('.voiceBtn,#voiceBtn').forEach(b => b.textContent = voiceOn ? '🔊 목소리 켬' : '🔇 목소리 끔'); }
 function toggleVoice(){ voiceOn = !voiceOn; try { localStorage.setItem('voice', voiceOn ? 'on' : 'off'); } catch {} setVoiceBtn(); if (!voiceOn){ audioQ.length = 0; audioOn?.pause(); audioOn = null; } }
 function openGame(){
-  if (!Object.keys(CLIP).length) fetch('game/voice/clips.json?v=4').then(r => r.json()).then(d => Object.assign(CLIP, d)).catch(() => {});
+  if (!Object.keys(CLIP).length) fetch('game/voice/clips.json?v=5').then(r => r.json()).then(d => Object.assign(CLIP, d)).catch(() => {});
   gameOn = true; $('#game').classList.remove('hidden'); setVoiceBtn();
   const room = $('#room'); room.querySelectorAll('.pet').forEach(e => e.remove());
   staff.forEach(s => {
