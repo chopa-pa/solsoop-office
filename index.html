@@ -113,6 +113,12 @@ textarea{min-height:90px;resize:vertical}
 .msg .w{display:block;font-size:11px;opacity:.7;margin-top:3px}
 .prop{border:1px solid var(--border-strong);border-radius:10px;padding:8px 10px;margin-top:8px;background:#fff;color:var(--fg);white-space:pre-wrap}
 .prop b{display:block;margin-bottom:2px}
+.ico{width:32px;height:32px;border-radius:50%;object-fit:cover;flex:none;vertical-align:middle;background:var(--muted)}
+.ico.big{width:34px;height:34px;margin-right:4px}
+.mrow{display:flex;gap:6px;align-items:flex-start;align-self:flex-start;max-width:92%}
+.mrow .msg{max-width:none}
+.task .m .who{display:inline-flex;align-items:center;gap:4px}
+.task .m .ico{width:18px;height:18px}
 /* 로그인 */
 #login{max-width:360px;margin:12vh auto;background:#fff;border:1px solid var(--border);border-radius:14px;padding:28px;box-shadow:var(--shadow)}
 #login h1{font-size:20px;margin-bottom:4px}
@@ -208,7 +214,7 @@ function render(){
     const total = list.length;
     if (c === 'done' && !showAllDone) list = list.slice(0, 5);
     const body = list.length ? list.map(t => { const s = sById(t.staff_id);
-      return `<button class="task" data-id="${esc(t.id)}"><div class="t">${esc(t.title)}</div><div class="m">${runTag(t)}<span>${s ? esc(s.emoji + ' ' + s.name) : '맡은 직원 없음'}</span><span>${ago(t.updated_at)}</span>${t.created_by ? `<span>${esc(t.created_by)}</span>` : ''}</div></button>`; }).join('')
+      return `<button class="task" data-id="${esc(t.id)}"><div class="t">${esc(t.title)}</div><div class="m">${runTag(t)}<span class="who">${s ? ico(s) + esc(s.name) : '맡은 직원 없음'}</span><span>${ago(t.updated_at)}</span>${t.created_by ? `<span>${esc(t.created_by)}</span>` : ''}</div></button>`; }).join('')
       : `<div class="empty">${c === 'review' ? '쵸파파 확인을 기다리는 일이 없습니다.' : '없음'}</div>`;
     const more = c === 'done' && total > 5 ? `<button class="more" id="moreDone">${showAllDone ? '접기' : `끝난 일 ${total}개 모두 보기`}</button>` : '';
     return `<div class="col ${c}"><div class="col-h"><span>${name}</span><span class="n">${total}</span></div><div class="col-b">${body}${more}</div></div>`;
@@ -223,6 +229,8 @@ function closeModal(){ $('#ov').classList.add('hidden'); openTask = null; chatSi
 $('#ov').addEventListener('click', e => { if (e.target.id === 'ov') closeModal(); });
 document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
 
+// 캐릭터 얼굴 아이콘(avatars/icons/, 원본 그림에서 머리만 잘라 96px). 없으면 이모지
+const ico = (s, cls = '') => { const f = (s?.avatar || '').match(/avatars\/([^/?]+)/); return f ? `<img class="ico ${cls}" src="avatars/icons/${esc(f[1])}?v=1" alt="${esc(s.name)}">` : esc(s?.emoji || ''); };
 const staffOpts = sel => staff.map(s => `<option value="${esc(s.id)}" ${s.id === sel ? 'selected' : ''}>${esc(s.emoji + ' ' + s.name + ' — ' + s.role)}</option>`).join('');
 function newTask(){
   openModal(`<h3>일 맡기기<button class="x" data-close>×</button></h3>
@@ -357,7 +365,7 @@ async function moveTask(col, id, from){   // id·from = 버튼이 들고 온 표
 function staffList(){
   chatSid = null;
   openModal(`<h3>직원 설정<button class="x" data-close>×</button></h3><div class="sub">직원을 누르면 지침(늘 지키는 것)을 고칠 수 있습니다.</div>
-    <div class="col-b" style="padding:0;margin-top:8px">${staff.map(s => `<button class="task" data-cfg="${esc(s.id)}"><div class="t">${esc(s.emoji + ' ' + s.name)}</div><div class="m"><span>${esc(s.role)}</span></div></button>`).join('')}</div>`);
+    <div class="col-b" style="padding:0;margin-top:8px">${staff.map(s => `<button class="task" data-cfg="${esc(s.id)}"><div class="t">${ico(s)} ${esc(s.name)}</div><div class="m"><span>${esc(s.role)}</span></div></button>`).join('')}</div>`);
 }
 const TEAM = {id:'team', emoji:'💬', name:'솔숲 단톡방', role:'직원 모두'};
 async function openChat(sid, keep){
@@ -375,8 +383,10 @@ async function openChat(sid, keep){
   const bub = m => {
     const mine = m.role === 'user';
     const prop = !mine && m.proposal ? `<div class="prop"><b>${esc(m.proposal.title)}</b>${m.proposal.detail ? esc(m.proposal.detail) : ''}<div class="row" style="margin-top:6px">${m.task_id ? `<button class="btn sm" data-open="${esc(m.task_id)}">#${esc(m.task_id)}로 맡김 · 보기</button>` : `<button class="btn primary sm" data-prop="${esc(m.id)}">이대로 맡기기</button>`}</div></div>` : '';
-    const from = team && !mine ? `<b style="display:block;font-size:12px;margin-bottom:2px">${esc((sById(m.staff_id)?.emoji || '') + ' ' + (m.who || ''))}</b>` : '';
-    return `<div class="msg ${mine ? 'me' : ''}">${from}${linkify(m.text)}${prop}<span class="w">${mine ? esc(m.who || '') + ' · ' : ''}${when(m.at)}${m.state === 'error' ? ' · 답 못 받음' : ''}</span></div>`;
+    const from = team && !mine ? `<b style="display:block;font-size:12px;margin-bottom:2px">${esc(m.who || '')}</b>` : '';
+    const face = mine ? '' : ico(sById(m.staff_id) || s);
+    const b = `<div class="msg ${mine ? 'me' : ''}">${from}${linkify(m.text)}${prop}<span class="w">${mine ? esc(m.who || '') + ' · ' : ''}${when(m.at)}${m.state === 'error' ? ' · 답 못 받음' : ''}</span></div>`;
+    return mine ? b : `<div class="mrow">${face}${b}</div>`;
   };
   const inner = (msgs.map(bub).join('') || `<div class="empty">${esc(s.name)}에게 하고 싶은 말을 적어 보세요. 일을 정하면 「이대로 맡기기」 버튼이 나옵니다.</div>`)
     + (chatThinking ? `<div class="msg think">${team ? '직원들이 답하는 중…' : esc(s.name) + (/[가-힣]/.test(s.name.slice(-1)) && (s.name.slice(-1).charCodeAt(0) - 0xAC00) % 28 ? '이' : '가') + ' 생각하는 중…'}</div>` : '');
@@ -385,7 +395,7 @@ async function openChat(sid, keep){
     if (chatHtml !== inner){ chatHtml = inner; box.innerHTML = inner; if (atEnd) box.scrollTop = box.scrollHeight; }
     return;
   }
-  openModal(`<h3><span>${esc(s.emoji)} ${esc(s.name)} <small style="font-weight:500;color:var(--muted-fg);font-size:14px">${esc(s.role)}</small></span><button class="x" data-close>×</button></h3>
+  openModal(`<h3><span>${team ? esc(s.emoji) : ico(s, 'big')} ${esc(s.name)} <small style="font-weight:500;color:var(--muted-fg);font-size:14px">${esc(s.role)}</small></span><button class="x" data-close>×</button></h3>
     <div class="chat" id="cBox">${chatHtml = inner}</div>
     <textarea id="cIn" placeholder="${team ? '이름을 부르면 그 직원이, 「다들」이라고 하면 모두 답합니다. 부르지 않으면 쵸파가 답합니다.' : '예) 오늘 눈 온 거로 릴스 하나 만들자. 답을 기다리는 동안에도 더 적어 보내도 됩니다.'}" style="min-height:70px"></textarea>
     <div class="row"><button class="btn primary" id="cGo">보내기</button><span class="hint" style="font-size:12px">Ctrl+Enter로도 보냅니다</span><span style="flex:1"></span>${team ? '' : `<button class="btn sm" data-cfg="${esc(sid)}">지침 보기</button>`}</div>`);
@@ -415,7 +425,7 @@ async function takeProposal(cid, btn){
 function showStaff(id){
   chatSid = null;
   const s = sById(id); const mine = tasks.filter(t => t.staff_id === id && t.col !== 'done');
-  openModal(`<h3><span>${esc(s.emoji)} ${esc(s.name)} <small style="font-weight:500;color:var(--muted-fg);font-size:14px">${esc(s.role)}</small></span><button class="x" data-close>×</button></h3>
+  openModal(`<h3><span>${ico(s, 'big')} ${esc(s.name)} <small style="font-weight:500;color:var(--muted-fg);font-size:14px">${esc(s.role)}</small></span><button class="x" data-close>×</button></h3>
     ${s.pet ? `<div style="font-size:13px;color:var(--muted-fg);margin-bottom:8px">${esc(s.pet)}</div>` : ''}<span class="pill ${esc(s.status)}">${esc(STATUS[s.status] || s.status)}</span>${s.bubble ? ` <span style="font-size:13px;color:var(--muted-fg)">「${esc(s.bubble)}」</span>` : ''}
     <label>지침 (이 직원이 늘 지키는 것)</label><textarea id="sGuide" style="min-height:160px">${esc(s.guide)}</textarea>
     <div class="row"><button class="btn primary" id="sSave">지침 저장</button></div>
