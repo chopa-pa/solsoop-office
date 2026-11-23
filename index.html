@@ -407,6 +407,7 @@ function speak(text, sid){ const f = CLIP[sid + '|' + text]; if (f) playUrl(f); 
 function setVoiceBtn(){ document.querySelectorAll('.voiceBtn,#voiceBtn').forEach(b => b.textContent = voiceOn ? '🔊 목소리 켬' : '🔇 목소리 끔'); }
 function toggleVoice(){ voiceOn = !voiceOn; try { localStorage.setItem('voice', voiceOn ? 'on' : 'off'); } catch {} setVoiceBtn(); if (!voiceOn){ audioQ.length = 0; audioOn?.pause(); audioOn = null; } }
 function openGame(){
+  if (!Object.keys(CLIP).length) fetch('game/voice/clips.json?v=1').then(r => r.json()).then(d => Object.assign(CLIP, d)).catch(() => {});
   gameOn = true; $('#game').classList.remove('hidden'); setVoiceBtn();
   const room = $('#room'); room.querySelectorAll('.pet').forEach(e => e.remove());
   staff.forEach(s => {
@@ -442,7 +443,7 @@ function gameStep(){
     if (Math.random() < 0.07){   // 혼잣말
       const r = ranking().findIndex(([id]) => id === s.id);
       const lines = l.hunger < 30 ? [`${SNACK[s.species || 'cat'][1]} 먹고 싶다…`, '배고파요…'] : r === 0 ? ['이번 주 1등은 저예요!', ...IDLE[s.id] || []] : [...SOUND[s.species || 'cat'], ...(IDLE[s.id] || [])];
-      say(s.id, lines[Math.floor(Math.random() * lines.length)]);
+      say(s.id, lines[Math.floor(Math.random() * lines.length)], 3200, Math.random() < 0.3);   // 혼잣말은 가끔만 소리로
     }
   });
 }
