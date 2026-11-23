@@ -140,13 +140,13 @@ textarea{min-height:90px;resize:vertical}
 .pet{position:absolute;width:84px;transform:translate(-50%,-100%);text-align:center;cursor:pointer;transition:left 2.6s ease-in-out, top 2.6s ease-in-out;user-select:none}
 .pet img{width:76px;height:76px;border-radius:50%;border:3px solid #fff;box-shadow:0 4px 10px rgba(0,0,0,.18);background:#fff;transition:transform .3s}
 .pet.flip img{transform:scaleX(-1)}
-.pet.walk img{animation:hop .5s ease-in-out infinite}
+.pet.walk img{animation:hop .7s ease-in-out infinite}
 .pet.sel img{border-color:var(--primary)}
 .pet .tag{font-size:11px;font-weight:700;background:rgba(255,255,255,.85);border-radius:8px;padding:1px 6px;display:inline-block;margin-top:2px}
 .pet .say{position:absolute;bottom:100%;left:50%;transform:translateX(-50%);background:#fff;color:var(--fg);font-size:12px;padding:5px 9px;border-radius:12px;box-shadow:0 2px 8px rgba(0,0,0,.15);white-space:nowrap;max-width:220px;overflow:hidden;text-overflow:ellipsis;margin-bottom:4px;animation:pop .2s ease-out}
 .pet .zz{position:absolute;top:-6px;right:0;font-size:14px}
 @keyframes hop{0%,100%{transform:translateY(0)}50%{transform:translateY(-5px)}}
-.pet.flip.walk img{animation:hopf .5s ease-in-out infinite}
+.pet.flip.walk img{animation:hopf .7s ease-in-out infinite}
 @keyframes hopf{0%,100%{transform:scaleX(-1) translateY(0)}50%{transform:scaleX(-1) translateY(-5px)}}
 @keyframes pop{from{transform:translateX(-50%) scale(.6);opacity:0}to{transform:translateX(-50%) scale(1);opacity:1}}
 .gside{width:320px;flex:none;overflow-y:auto}
@@ -360,10 +360,21 @@ let gameOn = false, gameTimer = null, pick = null, pos = {};
 // 배경(솔숲 스케치) 위 어디든 자유롭게 — 하늘·먼 산(위쪽)만 빼고 솔숲 주변 전체(%, 발 위치)
 const FIELD = {x1: 3, x2: 96, y1: 38, y2: 97};
 const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
-function spot(from){
-  if (!from) return {x: FIELD.x1 + Math.random() * (FIELD.x2 - FIELD.x1), y: FIELD.y1 + Math.random() * (FIELD.y2 - FIELD.y1)};
-  return {x: clamp(from.x + (Math.random() - .5) * 50, FIELD.x1, FIELD.x2), y: clamp(from.y + (Math.random() - .5) * 34, FIELD.y1, FIELD.y2)};
+const bounce = (v, a, b) => v < a ? a + (a - v) : v > b ? b - (v - b) : v;   // 가장자리에 닿으면 되튐(구석에 몰리지 않게)
+// 다른 캐릭터와 떨어진 자리를 고름: 후보 10개 중 가장 가까운 캐릭터와의 거리가 가장 먼 곳
+function spot(from, sid){
+  const others = Object.entries(pos).filter(([k]) => k !== sid).map(([, p]) => p);
+  let best = null, bestD = -1;
+  for (let i = 0; i < 10; i++){
+    const c = from
+      ? {x: clamp(bounce(from.x + (Math.random() - .5) * 30, FIELD.x1, FIELD.x2), FIELD.x1, FIELD.x2), y: clamp(bounce(from.y + (Math.random() - .5) * 20, FIELD.y1, FIELD.y2), FIELD.y1, FIELD.y2)}
+      : {x: FIELD.x1 + Math.random() * (FIELD.x2 - FIELD.x1), y: FIELD.y1 + Math.random() * (FIELD.y2 - FIELD.y1)};
+    const d = others.length ? Math.min(...others.map(o => Math.hypot(o.x - c.x, (o.y - c.y) * 1.5))) : 99;
+    if (d > bestD){ best = c; bestD = d; }
+  }
+  return best;
 }
+const busy = {};   // 걷는 중인 캐릭터(도착 시각)
 const SOUND = {cat:['야옹~', '냥!', '냐아옹', '골골골…', '하암~'], dog:['멍!', '왈왈!', '멍멍~', '헥헥', '킁킁…']};
 const IDLE = {
   manager:['오늘 일 나눌 거 있습니까?', '회의 한번 할까요?', '보고서 정리 중입니다.'],
@@ -393,7 +404,7 @@ function openGame(){
   staff.forEach(s => {
     const d = document.createElement('div'); d.className = 'pet'; d.dataset.pet = s.id;
     d.innerHTML = `<img src="${esc(s.avatar || '')}" alt=""><div class="tag">${esc(s.name)}</div>`;
-    room.appendChild(d); pos[s.id] = pos[s.id] || spot();
+    room.appendChild(d); pos[s.id] = pos[s.id] || spot(null, s.id);
     d.style.left = pos[s.id].x + '%'; d.style.top = pos[s.id].y + '%';
   });
   renderRank(); renderPick();
@@ -411,10 +422,14 @@ function gameStep(){
     const l = life(s); d.querySelector('.zz')?.remove();
     if (s.id === pick){ d.classList.remove('walk'); return; }
     if (l.mood < 20){ d.classList.remove('walk'); d.insertAdjacentHTML('beforeend', '<span class="zz">💤</span>'); return; }   // 기분 바닥이면 잠
-    if (Math.random() < (l.hunger < 30 ? 0.06 : 0.16)){   // 돌아다니기(배고프면 덜 움직임)
-      const p = pos[s.id], to = spot(p), nx = to.x, ny = to.y;
+    if ((busy[s.id] || 0) < Date.now() && Math.random() < (l.hunger < 30 ? 0.04 : 0.1)){   // 천천히 산책(배고프면 덜 움직임)
+      const p = pos[s.id], to = spot(p, s.id), nx = to.x, ny = to.y;
+      const sec = clamp(Math.hypot(nx - p.x, (ny - p.y) * 1.5) / 2.2, 3, 10);   // 초당 화면 폭 약 2% — 걷는 속도
+      d.style.transition = `left ${sec}s linear, top ${sec}s linear`;
       d.classList.toggle('flip', nx < p.x); d.classList.add('walk'); pos[s.id] = {x: nx, y: ny};
-      d.style.left = nx + '%'; d.style.top = ny + '%'; setTimeout(() => d.classList.remove('walk'), 2600);
+      d.style.left = nx + '%'; d.style.top = ny + '%';
+      busy[s.id] = Date.now() + sec * 1000 + 2000;
+      setTimeout(() => d.classList.remove('walk'), sec * 1000);
     }
     if (Math.random() < 0.07){   // 혼잣말
       const r = ranking().findIndex(([id]) => id === s.id);
