@@ -403,17 +403,12 @@ function playUrl(url){
   const next = () => { const u = audioQ.shift(); if (!u){ audioOn = null; return; } audioOn = new Audio(u); audioOn.onended = audioOn.onerror = next; audioOn.play().catch(next); };
   next();
 }
-// 동물 소리(야옹·멍 등)는 사람 목소리 말고 진짜 동물 소리(game/sfx, 퍼블릭 도메인·CC0)
-const SFX = {cat: {'야옹~':'cat_meow1', '냥!':'cat_meow3', '냐아옹':'cat_meow4', '골골골…':'cat_purr', '하암~':'cat_meow2'},
-             dog: {'멍!':'dog_bark1', '왈왈!':'dog_bark2', '멍멍~':'dog_bark3', '헥헥':'dog_whine1', '킁킁…':'dog_whine2'}};
-function speak(text, sid){
-  const fx = SFX[sById(sid)?.species || 'cat']?.[text];
-  const f = fx ? `game/sfx/${fx}.mp3` : CLIP[sid + '|' + text]; if (f) playUrl(f);
-}
+// 야옹·멍·냥냥 같은 소리는 「사람이 귀엽게 흉내 낸 소리」(tools/gen_cute.py) — 진짜 동물 녹음은 동물원 같다고 뺌(11-23 쵸파파)
+function speak(text, sid){ const f = CLIP[sid + '|' + text]; if (f) playUrl(f); }
 function setVoiceBtn(){ document.querySelectorAll('.voiceBtn,#voiceBtn').forEach(b => b.textContent = voiceOn ? '🔊 목소리 켬' : '🔇 목소리 끔'); }
 function toggleVoice(){ voiceOn = !voiceOn; try { localStorage.setItem('voice', voiceOn ? 'on' : 'off'); } catch {} setVoiceBtn(); if (!voiceOn){ audioQ.length = 0; audioOn?.pause(); audioOn = null; } }
 function openGame(){
-  if (!Object.keys(CLIP).length) fetch('game/voice/clips.json?v=2').then(r => r.json()).then(d => Object.assign(CLIP, d)).catch(() => {});
+  if (!Object.keys(CLIP).length) fetch('game/voice/clips.json?v=3').then(r => r.json()).then(d => Object.assign(CLIP, d)).catch(() => {});
   gameOn = true; $('#game').classList.remove('hidden'); setVoiceBtn();
   const room = $('#room'); room.querySelectorAll('.pet').forEach(e => e.remove());
   staff.forEach(s => {
@@ -473,7 +468,7 @@ function petClick(sid){
 async function pat(sid){
   const s = sById(sid), l = life(s);
   await sb.from('office_staff').update({mood: Math.min(100, l.mood + 8), hunger: l.hunger, fed_at: new Date().toISOString()}).eq('id', sid);
-  playUrl(`game/sfx/${s.species === 'dog' ? 'dog_whine1' : 'cat_purr'}.mp3`);
+  speak(s.species === 'dog' ? '헥헥' : '골골골…', sid);
   const lines = PET[s.species || 'cat']; say(sid, lines[Math.floor(Math.random() * lines.length)], 3200, true); load();
 }
 async function award(t, kind, pts){   // 인사고과 점수(같은 일감·같은 종류 한 번 — DB가 막음)
