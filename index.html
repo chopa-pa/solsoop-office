@@ -264,7 +264,7 @@ async function createTask(){
   closeModal(); toast('맡겼습니다'); load();
 }
 async function showTask(id, keep){
-  const t = tasks.find(x => x.id === id); if (!t) return; openTask = id;
+  const t = tasks.find(x => x.id === id); if (!t) return; openTask = id; chatSid = null;   // 대화 창 새로고침이 이 창을 덮지 않게
   const seq = ++showSeq;
   const {data: logs} = await sb.from('office_log').select('*').eq('task_id', id).order('at');
   if (seq !== showSeq) return;   // 그사이 다른 카드를 열었거나 창을 닫음
@@ -354,6 +354,7 @@ async function moveTask(col, id, from){   // id·from = 버튼이 들고 온 표
   await addLog(id, msg, t?.staff_id); load();
 }
 function staffList(){
+  chatSid = null;
   openModal(`<h3>직원 설정<button class="x" data-close>×</button></h3><div class="sub">직원을 누르면 지침(늘 지키는 것)을 고칠 수 있습니다.</div>
     <div class="col-b" style="padding:0;margin-top:8px">${staff.map(s => `<button class="task" data-cfg="${esc(s.id)}"><div class="t">${esc(s.emoji + ' ' + s.name)}</div><div class="m"><span>${esc(s.role)}</span></div></button>`).join('')}</div>`);
 }
@@ -400,6 +401,7 @@ async function takeProposal(cid, btn){
   toast(`#${data.id}로 맡겼습니다`); load(); openChat(m.staff_id, true);
 }
 function showStaff(id){
+  chatSid = null;
   const s = sById(id); const mine = tasks.filter(t => t.staff_id === id && t.col !== 'done');
   openModal(`<h3><span>${esc(s.emoji)} ${esc(s.name)} <small style="font-weight:500;color:var(--muted-fg);font-size:14px">${esc(s.role)}</small></span><button class="x" data-close>×</button></h3>
     ${s.pet ? `<div style="font-size:13px;color:var(--muted-fg);margin-bottom:8px">${esc(s.pet)}</div>` : ''}<span class="pill ${esc(s.status)}">${esc(STATUS[s.status] || s.status)}</span>${s.bubble ? ` <span style="font-size:13px;color:var(--muted-fg)">「${esc(s.bubble)}」</span>` : ''}
