@@ -1,0 +1,5 @@
+놀이방 동물 소리 출처 (위키미디어 공용, 잘라서 씀)
+- cat_meow1~4: "Meow of a pleading cat.oga" — 퍼블릭 도메인
+- cat_purr: "Purring cat.oga" — 퍼블릭 도메인
+- dog_bark1~3: "Dog.ogg" — 퍼블릭 도메인 (작은 개처럼 음높이 올림)
+- dog_whine1~2: "Puppy at a night.ogg" — CC0
