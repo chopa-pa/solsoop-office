@@ -136,10 +136,8 @@ textarea{min-height:90px;resize:vertical}
 #game{position:fixed;inset:0;background:var(--bg,#f8fafc);z-index:10;display:flex;flex-direction:column}
 #game header{flex:none}
 .gwrap{flex:1;display:flex;gap:14px;padding:14px;min-height:0}
-.room{position:relative;flex:1;border-radius:18px;overflow:hidden;background:linear-gradient(#f3ead8 0 38%, #d9b98a 38% 100%);border:1px solid var(--border);box-shadow:var(--shadow);min-height:360px}
-.room .rug{position:absolute;left:18%;right:18%;top:52%;bottom:10%;border-radius:50%;background:radial-gradient(#9cc5a1,#7fb08a);opacity:.55}
-.room .sign{position:absolute;top:14px;left:50%;transform:translateX(-50%);background:#fff;border-radius:8px;padding:4px 12px;font-size:12px;color:var(--muted-fg);box-shadow:var(--shadow)}
-.pet{position:absolute;width:84px;text-align:center;cursor:pointer;transition:left 2.6s ease-in-out, top 2.6s ease-in-out;user-select:none}
+.room{position:relative;flex:1;align-self:flex-start;aspect-ratio:3/2;border-radius:18px;overflow:hidden;background:#cfe3c4 url(game/solsoop_bg.jpg?v=1) center/cover no-repeat;border:1px solid var(--border);box-shadow:var(--shadow)}
+.pet{position:absolute;width:84px;transform:translate(-50%,-100%);text-align:center;cursor:pointer;transition:left 2.6s ease-in-out, top 2.6s ease-in-out;user-select:none}
 .pet img{width:76px;height:76px;border-radius:50%;border:3px solid #fff;box-shadow:0 4px 10px rgba(0,0,0,.18);background:#fff;transition:transform .3s}
 .pet.flip img{transform:scaleX(-1)}
 .pet.walk img{animation:hop .5s ease-in-out infinite}
@@ -154,7 +152,8 @@ textarea{min-height:90px;resize:vertical}
 .gside{width:320px;flex:none;overflow-y:auto}
 .pick{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:12px 14px;box-shadow:var(--shadow)}
 .pick h4{margin:0 0 6px;display:flex;align-items:center;gap:8px;font-size:15px}
-@media (max-width:760px){.gwrap{flex-direction:column}.gside{width:auto}.room{min-height:420px}}
+.pet img{width:64px;height:64px}
+@media (max-width:760px){.gwrap{flex-direction:column;overflow-y:auto}.gside{width:auto}.room{flex:none;width:100%}.pet{width:60px}.pet img{width:46px;height:46px}.pet .tag{font-size:10px}}
 /* 로그인 */
 #login{max-width:360px;margin:12vh auto;background:#fff;border:1px solid var(--border);border-radius:14px;padding:28px;box-shadow:var(--shadow)}
 #login h1{font-size:20px;margin-bottom:4px}
@@ -208,7 +207,7 @@ textarea{min-height:90px;resize:vertical}
     <button class="link" id="voiceBtn"></button>
   </header>
   <div class="gwrap">
-    <div class="room" id="room"><div class="rug"></div><div class="sign">스테이솔숲 사무실 휴게실</div></div>
+    <div class="room" id="room"></div>
     <aside class="gside">
       <div class="rank" id="rank"></div>
       <div class="pick" id="pick"><div class="sub">캐릭터를 눌러 보세요. 간식도 주고 쓰다듬을 수 있습니다.</div></div>
@@ -358,6 +357,21 @@ async function meatParty(){
 }
 // ---------- 놀이방 ----------
 let gameOn = false, gameTimer = null, pick = null, pos = {};
+// 배경(솔숲 스케치) 위 돌아다니는 구역 — [x1, x2, y1, y2] %, 발이 닿는 자리
+const ZONE = {
+  cathouse: [70, 81, 47, 52],   // 관리동 앞 고양이 집
+  home: [45, 66, 44, 47],       // 우리 집 데크(쵸파 집, 우리는 얹혀 삼)
+  yard: [70, 90, 58, 82],       // 마당(흰 콘크리트)
+  drive: [8, 55, 84, 94],       // 아래 진입로
+  stay: [24, 52, 67, 71]        // 솔숲 데크
+};
+function zoneFor(s){
+  const r = Math.random();
+  if (s.id === 'manager') return r < .45 ? 'home' : r < .8 ? 'yard' : 'drive';
+  if (s.species === 'dog') return r < .6 ? 'yard' : r < .85 ? 'drive' : 'stay';
+  return r < .4 ? 'cathouse' : r < .8 ? 'yard' : r < .92 ? 'drive' : 'stay';
+}
+function spot(z){ const [x1, x2, y1, y2] = ZONE[z]; return {x: x1 + Math.random() * (x2 - x1), y: y1 + Math.random() * (y2 - y1)}; }
 const SOUND = {cat:['야옹~', '냥!', '냐아옹', '골골골…', '하암~'], dog:['멍!', '왈왈!', '멍멍~', '헥헥', '킁킁…']};
 const IDLE = {
   manager:['오늘 일 나눌 거 있습니까?', '회의 한번 할까요?', '보고서 정리 중입니다.'],
@@ -371,7 +385,7 @@ const IDLE = {
 const PET = {   // 쓰다듬기 반응
   cat:['골골골… 좋아요.', '거기 말고 턱 밑이요.', '냥… 한 번만 더.'], dog:['꼬리 흔드는 중!', '헥헥, 더 해 주세요!', '배도 긁어 주세요 멍!']
 };
-let voiceOn = (() => { try { return localStorage.getItem('voice') !== 'off'; } catch { return true; } })();
+let voiceOn = (() => { try { return localStorage.getItem('voice') === 'on'; } catch { return false; } })();   // 소리는 기본 끔(놀이방에서 켬)
 const VOICE = {manager:[1.3,1.05], review:[1.5,1.0], insta:[0.8,0.95], writer:[1.2,1.05], channel:[1.0,1.0], sms:[1.6,1.1], design:[1.4,1.0]};
 function speak(text, sid){   // 짧은 말만 소리로(브라우저 음성, 무료)
   if (!voiceOn || !window.speechSynthesis || !text || text.length > 140) return;
@@ -387,7 +401,7 @@ function openGame(){
   staff.forEach(s => {
     const d = document.createElement('div'); d.className = 'pet'; d.dataset.pet = s.id;
     d.innerHTML = `<img src="${esc(s.avatar || '')}" alt=""><div class="tag">${esc(s.name)}</div>`;
-    room.appendChild(d); pos[s.id] = pos[s.id] || {x: 10 + Math.random()*75, y: 40 + Math.random()*45};
+    room.appendChild(d); pos[s.id] = pos[s.id] || spot(s.id === 'manager' ? 'home' : s.species === 'dog' ? 'yard' : 'cathouse');
     d.style.left = pos[s.id].x + '%'; d.style.top = pos[s.id].y + '%';
   });
   renderRank(); renderPick();
@@ -405,8 +419,8 @@ function gameStep(){
     const l = life(s); d.querySelector('.zz')?.remove();
     if (s.id === pick){ d.classList.remove('walk'); return; }
     if (l.mood < 20){ d.classList.remove('walk'); d.insertAdjacentHTML('beforeend', '<span class="zz">💤</span>'); return; }   // 기분 바닥이면 잠
-    if (Math.random() < (l.hunger < 30 ? 0.12 : 0.3)){   // 돌아다니기(배고프면 덜 움직임)
-      const p = pos[s.id], nx = Math.min(85, Math.max(2, p.x + (Math.random() - .5) * 40)), ny = Math.min(82, Math.max(36, p.y + (Math.random() - .5) * 30));
+    if (Math.random() < (l.hunger < 30 ? 0.06 : 0.16)){   // 돌아다니기(배고프면 덜 움직임)
+      const p = pos[s.id], to = spot(zoneFor(s)), nx = to.x, ny = to.y;
       d.classList.toggle('flip', nx < p.x); d.classList.add('walk'); pos[s.id] = {x: nx, y: ny};
       d.style.left = nx + '%'; d.style.top = ny + '%'; setTimeout(() => d.classList.remove('walk'), 2600);
     }
@@ -650,10 +664,11 @@ function showStaff(id){
   const s = sById(id); const mine = tasks.filter(t => t.staff_id === id && t.col !== 'done');
   openModal(`<h3><span>${ico(s, 'big')} ${esc(s.name)} <small style="font-weight:500;color:var(--muted-fg);font-size:14px">${esc(s.role)}</small></span><button class="x" data-close>×</button></h3>
     ${s.pet ? `<div style="font-size:13px;color:var(--muted-fg);margin-bottom:8px">${esc(s.pet)}</div>` : ''}<span class="pill ${esc(s.status)}">${esc(STATUS[s.status] || s.status)}</span>${s.bubble ? ` <span style="font-size:13px;color:var(--muted-fg)">「${esc(s.bubble)}」</span>` : ''}
+    <label>말투 (대화·단톡방에서 짧게 말할 때)</label><textarea id="sTone" style="min-height:60px">${esc(s.tone || '')}</textarea>
     <label>지침 (이 직원이 늘 지키는 것)</label><textarea id="sGuide" style="min-height:160px">${esc(s.guide)}</textarea>
-    <div class="row"><button class="btn primary" id="sSave">지침 저장</button></div>
+    <div class="row"><button class="btn primary" id="sSave">저장</button></div>
     <label>맡은 일</label><div class="col-b" style="padding:0">${mine.map(t => `<button class="task" data-id="${esc(t.id)}"><div class="t">${esc(t.title)}</div><div class="m"><span>${COLNAME[t.col]}</span><span>${ago(t.updated_at)}</span></div></button>`).join('') || '<div class="empty">없음</div>'}</div>`);
-  $('#sSave').onclick = async () => { const {error} = await sb.from('office_staff').update({guide: $('#sGuide').value}).eq('id', id); toast(error ? '저장 실패: ' + error.message : '지침을 저장했습니다'); load(); };
+  $('#sSave').onclick = async () => { const {error} = await sb.from('office_staff').update({guide: $('#sGuide').value, tone: $('#sTone').value}).eq('id', id); toast(error ? '저장 실패: ' + error.message : '말투·지침을 저장했습니다'); load(); };
 }
 document.addEventListener('click', e => {
   const c = e.target.closest('[data-close]'); if (c){ closeModal(); return; }
