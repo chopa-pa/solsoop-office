@@ -151,6 +151,7 @@ textarea{min-height:90px;resize:vertical}
     </section>
     <section id="officeCol">
       <h2>사무실 <small>직원을 누르면 대화합니다</small></h2>
+      <button class="btn" id="teamBtn" style="width:100%;margin-bottom:14px;justify-content:center">💬 솔숲 단톡방 — 직원 모두와 이야기</button>
       <div class="desks" id="desks"></div>
       <p class="note">직원과 대화하다가 「이대로 맡기기」를 누르면 일감이 됩니다. 윈도우 서버의 직원이 끝까지 만들고, 글은 밀크(Codex)가 검수한 뒤 「확인 대기」에 올립니다.<br>게시·채널 수정·드라이브 저장은 「승인 · 실행」을 누르면 직원이 직접 합니다. 로그인·결제·문자 발송은 쵸파파가 합니다.</p>
     </section>
@@ -358,10 +359,13 @@ function staffList(){
   openModal(`<h3>직원 설정<button class="x" data-close>×</button></h3><div class="sub">직원을 누르면 지침(늘 지키는 것)을 고칠 수 있습니다.</div>
     <div class="col-b" style="padding:0;margin-top:8px">${staff.map(s => `<button class="task" data-cfg="${esc(s.id)}"><div class="t">${esc(s.emoji + ' ' + s.name)}</div><div class="m"><span>${esc(s.role)}</span></div></button>`).join('')}</div>`);
 }
+const TEAM = {id:'team', emoji:'💬', name:'솔숲 단톡방', role:'직원 모두'};
 async function openChat(sid, keep){
-  const s = sById(sid); if (!s) return;
+  const team = sid === 'team', s = team ? TEAM : sById(sid); if (!s) return;
   const seq = ++chatSeq; openTask = null;
-  const {data, error} = await sb.from('office_chat').select('*').eq('staff_id', sid).order('at', {ascending:false}).order('id', {ascending:false}).limit(60);
+  let qq = sb.from('office_chat').select('*');
+  qq = team ? qq.eq('room', 'team') : qq.eq('staff_id', sid).is('room', null);
+  const {data, error} = await qq.order('at', {ascending:false}).order('id', {ascending:false}).limit(60);
   if (seq !== chatSeq) return;
   if (error){ toast('대화 불러오기 실패: ' + error.message); return; }
   const wasOpen = chatSid === sid, box = $('#cBox'), atEnd = !box || box.scrollHeight - box.scrollTop - box.clientHeight < 40;
@@ -371,10 +375,11 @@ async function openChat(sid, keep){
   const bub = m => {
     const mine = m.role === 'user';
     const prop = !mine && m.proposal ? `<div class="prop"><b>${esc(m.proposal.title)}</b>${m.proposal.detail ? esc(m.proposal.detail) : ''}<div class="row" style="margin-top:6px">${m.task_id ? `<button class="btn sm" data-open="${esc(m.task_id)}">#${esc(m.task_id)}로 맡김 · 보기</button>` : `<button class="btn primary sm" data-prop="${esc(m.id)}">이대로 맡기기</button>`}</div></div>` : '';
-    return `<div class="msg ${mine ? 'me' : ''}">${linkify(m.text)}${prop}<span class="w">${mine ? esc(m.who || '') + ' · ' : ''}${when(m.at)}${m.state === 'error' ? ' · 답 못 받음' : ''}</span></div>`;
+    const from = team && !mine ? `<b style="display:block;font-size:12px;margin-bottom:2px">${esc((sById(m.staff_id)?.emoji || '') + ' ' + (m.who || ''))}</b>` : '';
+    return `<div class="msg ${mine ? 'me' : ''}">${from}${linkify(m.text)}${prop}<span class="w">${mine ? esc(m.who || '') + ' · ' : ''}${when(m.at)}${m.state === 'error' ? ' · 답 못 받음' : ''}</span></div>`;
   };
   const inner = (msgs.map(bub).join('') || `<div class="empty">${esc(s.name)}에게 하고 싶은 말을 적어 보세요. 일을 정하면 「이대로 맡기기」 버튼이 나옵니다.</div>`)
-    + (chatThinking ? `<div class="msg think">${esc(s.name)}${/[가-힣]/.test(s.name.slice(-1)) && (s.name.slice(-1).charCodeAt(0) - 0xAC00) % 28 ? '이' : '가'} 생각하는 중…</div>` : '');
+    + (chatThinking ? `<div class="msg think">${team ? '직원들이 답하는 중…' : esc(s.name) + (/[가-힣]/.test(s.name.slice(-1)) && (s.name.slice(-1).charCodeAt(0) - 0xAC00) % 28 ? '이' : '가') + ' 생각하는 중…'}</div>` : '');
   // 이미 열린 대화 창이면 말 목록만 바꾼다 — 입력 칸을 다시 그리면 치던 글(한글 조합)·커서가 튕김(11-23 쵸파파)
   if (wasOpen && box && $('#cIn')){
     if (chatHtml !== inner){ chatHtml = inner; box.innerHTML = inner; if (atEnd) box.scrollTop = box.scrollHeight; }
@@ -382,13 +387,13 @@ async function openChat(sid, keep){
   }
   openModal(`<h3><span>${esc(s.emoji)} ${esc(s.name)} <small style="font-weight:500;color:var(--muted-fg);font-size:14px">${esc(s.role)}</small></span><button class="x" data-close>×</button></h3>
     <div class="chat" id="cBox">${chatHtml = inner}</div>
-    <textarea id="cIn" placeholder="예) 오늘 눈 온 거로 릴스 하나 만들자. 답을 기다리는 동안에도 더 적어 보내도 됩니다." style="min-height:70px"></textarea>
-    <div class="row"><button class="btn primary" id="cGo">보내기</button><span class="hint" style="font-size:12px">Ctrl+Enter로도 보냅니다</span><span style="flex:1"></span><button class="btn sm" data-cfg="${esc(sid)}">지침 보기</button></div>`);
+    <textarea id="cIn" placeholder="${team ? '이름을 부르면 그 직원이, 「다들」이라고 하면 모두 답합니다. 부르지 않으면 쵸파가 답합니다.' : '예) 오늘 눈 온 거로 릴스 하나 만들자. 답을 기다리는 동안에도 더 적어 보내도 됩니다.'}" style="min-height:70px"></textarea>
+    <div class="row"><button class="btn primary" id="cGo">보내기</button><span class="hint" style="font-size:12px">Ctrl+Enter로도 보냅니다</span><span style="flex:1"></span>${team ? '' : `<button class="btn sm" data-cfg="${esc(sid)}">지침 보기</button>`}</div>`);
   const nb = $('#cBox'); nb.scrollTop = nb.scrollHeight;
   const send = async () => {
     const text = $('#cIn').value.trim(); if (!text) return;
     $('#cGo').disabled = true;
-    const {error} = await sb.from('office_chat').insert({staff_id: sid, role:'user', who: me, text, state:'pending'});
+    const {error} = await sb.from('office_chat').insert(team ? {room:'team', staff_id: null, role:'user', who: me, text, state:'pending'} : {staff_id: sid, role:'user', who: me, text, state:'pending'});
     $('#cGo').disabled = false;
     if (error){ toast('보내기 실패: ' + error.message); return; }
     $('#cIn').value = ''; $('#cBox').scrollTop = 1e9; openChat(sid, true);
@@ -405,7 +410,7 @@ async function takeProposal(cid, btn){
   if (error){ toast('맡기기 실패: ' + error.message); btn.disabled = false; return; }
   await sb.from('office_chat').update({task_id: data.id}).eq('id', cid).is('task_id', null);
   await addLog(data.id, `${me}님이 ${sById(m.staff_id)?.name || ''}와 대화하고 맡김`, m.staff_id);
-  toast(`#${data.id}로 맡겼습니다`); load(); openChat(m.staff_id, true);
+  toast(`#${data.id}로 맡겼습니다`); load(); openChat(m.room === 'team' ? 'team' : m.staff_id, true);
 }
 function showStaff(id){
   chatSid = null;
@@ -430,6 +435,7 @@ document.addEventListener('click', e => {
 });
 $('#newTask').onclick = newTask;
 $('#staffCfg').onclick = staffList;
+$('#teamBtn').onclick = () => openChat('team');
 $('#logout').onclick = async () => { await sb.auth.signOut(); location.reload(); };
 $('#loginForm').onsubmit = async e => {
   e.preventDefault(); $('#lErr').textContent = '';
@@ -452,7 +458,7 @@ async function start(){
   let deb = null; const again = () => { clearTimeout(deb); deb = setTimeout(load, 400); };
   if (!chan) chan = sb.channel('office').on('postgres_changes', {event:'*', schema:'public', table:'office_tasks'}, again)
     .on('postgres_changes', {event:'*', schema:'public', table:'office_staff'}, again)
-    .on('postgres_changes', {event:'*', schema:'public', table:'office_chat'}, p => { const r = p.new || p.old; if (chatSid && r?.staff_id === chatSid) openChat(chatSid, true); }).subscribe();
+    .on('postgres_changes', {event:'*', schema:'public', table:'office_chat'}, p => { const r = p.new || p.old; if (chatSid && (chatSid === 'team' ? r?.room === 'team' : r?.staff_id === chatSid && !r?.room)) openChat(chatSid, true); }).subscribe();
   setInterval(() => { if (chatSid && chatThinking) openChat(chatSid, true); }, 4000);   // 실시간이 끊겨도 답을 받음
   if (!timer) sched();
 }
