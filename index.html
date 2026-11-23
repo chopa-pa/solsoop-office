@@ -268,8 +268,12 @@ async function load(){
   points = pp.data || []; game = Object.fromEntries((gg.data || []).map(g => [g.key, g.value || {}]));
   judges = {review: jr.count || 0, manager: jm.count || 0};
   render(); sched(); if (gameOn) renderPick();
-  if (openTask){ const t = tasks.find(x => x.id === openTask); if (t) showTask(t.id, true); }
+  if (openTask){ const t = tasks.find(x => x.id === openTask); if (t){ if (typing()) taskStale = true; else showTask(t.id, true); } }
 }
+// 일감 창에서 글을 쓰는 중이면 창을 다시 그리지 않는다(다시 그리면 한글 입력이 튕김, 11-24 쵸파파). 칸을 벗어나면 그때 새로
+let taskStale = false;
+const typing = () => { const a = document.activeElement; return !!a && $('#modal').contains(a) && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName); };
+$('#modal').addEventListener('focusout', () => setTimeout(() => { if (taskStale && openTask && !typing()){ taskStale = false; showTask(openTask, true); } }, 300));
 function render(){
   const n = c => tasks.filter(t => t.col === c).length;
   $('#counts').innerHTML = `<span class="cnt">하는 중<b>${n('doing')}</b></span><span class="cnt ${n('review') ? 'wait' : ''}">확인 대기<b>${n('review')}</b></span><span class="cnt">할 일<b>${n('todo')}</b></span><span class="cnt">오늘 실행<b>${runsToday}</b></span>`;
@@ -477,6 +481,7 @@ async function award(t, kind, pts){   // 인사고과 점수(같은 일감·같�
 }
 const staffOpts = sel => staff.map(s => `<option value="${esc(s.id)}" ${s.id === sel ? 'selected' : ''}>${esc(s.emoji + ' ' + s.name + ' — ' + s.role)}</option>`).join('');
 function newTask(){
+  openTask = null; chatSid = null;   // 열려 있던 일감·대화 새로고침이 이 창을 덮지 않게
   openModal(`<h3>일 맡기기<button class="x" data-close>×</button></h3>
     <label>무슨 일인가요</label><input type="text" id="nTitle" placeholder="예: 12월 첫 주 인스타 캡션 3개">
     <label>자세히 (선택)</label><textarea id="nDetail" placeholder="원하는 것, 참고할 것, 기한"></textarea>
