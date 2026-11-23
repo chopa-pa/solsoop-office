@@ -226,7 +226,19 @@ async function updIf(id, body, cond, what){
   const {data, error} = await cond(sb.from('office_tasks').update(body).eq('id', id)).select('id');
   if (error){ toast(what + ' 실패: ' + error.message); return false; }
   if (!data.length){ toast('다른 곳에서 먼저 바뀌었습니다'); load(); return false; }
+  await refreshStaff();
   return true;
+}
+// 승인·옮기기 뒤 직원 상태를 맡은 일 기준으로 다시 맞춤(러너 규칙과 같음: 하는 중 → 일하는 중, 확인 대기만 → 확인 기다림, 없으면 쉬는 중)
+async function refreshStaff(){
+  const {data: ts, error} = await sb.from('office_tasks').select('staff_id,col').in('col', ['doing','review']);
+  if (error) return;
+  for (const s of staff){
+    const mine = ts.filter(t => t.staff_id === s.id);
+    if (mine.some(t => t.col === 'doing')) continue;   // 일하는 중 표시는 러너가 관리
+    const st = mine.length ? 'waiting' : 'idle', bub = mine.length ? '확인 기다리는 중' : '';
+    if (s.status !== st || (s.bubble || '') !== bub) await sb.from('office_staff').update({status: st, bubble: bub}).eq('id', s.id);
+  }
 }
 const notRunning = qq => qq.or('run_state.is.null,run_state.neq.running');
 async function createTask(){
