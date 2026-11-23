@@ -263,13 +263,26 @@ async function showTask(id, keep){
   const act = running
     ? `<span class="hint">직원이 일하는 중입니다</span>`
     : t.col === 'review'
-    ? `<button class="btn primary" data-move="done" ${mvAttr}>승인 · 끝으로</button><input type="text" id="tRedo" placeholder="다시 할 때 메모 (선택)" value="${esc(redoKeep)}" style="flex:1;min-width:160px"><button class="btn warn" id="tRedoGo" ${did}>다시 하기</button>`
+    ? `<button class="btn primary" data-move="done" ${mvAttr}>승인 · 끝으로</button>`
     : `${ci > 0 ? `<button class="btn" data-move="${COLS[ci-1][0]}" ${mvAttr}>← ${COLS[ci-1][1]}</button>` : ''}${ci < 3 ? `<button class="btn primary" data-move="${COLS[ci+1][0]}" ${mvAttr}>${COLS[ci+1][1]} →</button>` : ''}${t.run_state === 'error' ? `<button class="btn warn" id="tRetry" ${did}>다시 시도</button>` : ''}${t.run_state === 'queued' ? `<button class="btn" id="tUnqueue" ${did}>바로 시작 취소</button>` : ''}`;
   let res = t.result || '', ck = '';
   const first = res.split('\n')[0].trim();
   if (/^검수(:| 못 함| 생략)/.test(first)){
     ck = `<span class="ck ${ckCls(first)}">${esc(first)}</span>`;
     const nl = res.indexOf('\n'); res = nl < 0 ? '' : res.slice(nl + 1).replace(/^\n+/, '');
+  }
+  // 확인 대기: 수정 요청 칸 + 직원이 「## 쵸파파께 여쭐 것」에 단 보기(가·나·다)를 버튼으로
+  let fix = '';
+  if (t.col === 'review' && !running){
+    const sec = (res.split(/^## 쵸파파께 여쭐 것[^\n]*\n/m)[1] || '').split(/^## /m)[0];
+    const qs = sec.split('\n').map(l => l.match(/^\s*(\d+)[.)]\s*(.+)$/)).filter(Boolean).map(m => {
+      const p = (' ' + m[2]).split(/\s([가나다라마바사])\)\s*/);
+      return {n: m[1], q: p[0].trim(), opts: p.slice(1).reduce((a, x, i) => (i % 2 ? a[a.length - 1].push(x.trim()) : a.push([x]), a), [])};
+    });
+    const ask = qs.map(x => `<div class="sub" style="margin-top:6px">${esc(x.n)}. ${esc(x.q)}</div><div class="row" style="margin-top:4px">${x.opts.map(([k, v]) => `<button class="btn sm" data-ans="${esc(x.n)}" data-val="${esc(k + ') ' + (v || ''))}">${esc(k)}) ${esc(v || '')}</button>`).join('')}</div>`).join('');
+    fix = `<label>고칠 점 · 더 할 일</label>${ask ? `<div class="sub">직원이 여쭌 것 — 누르면 아래 칸에 들어갑니다</div>${ask}` : ''}
+      <textarea id="tRedo" placeholder="예) 더 짧게, 이모지 빼고, 검색어 산청 독채 넣어서. 비워 두고 보내면 그대로 다시 합니다.">${esc(redoKeep)}</textarea>
+      <div class="row"><button class="btn warn" id="tRedoGo" ${did}>수정 요청 보내기</button><span class="hint">같은 직원이 앞 결과를 이어서 고친 뒤 다시 확인 대기로 올립니다</span></div>`;
   }
   openModal(`<h3><span>${esc(t.title)}</span><button class="x" data-close>×</button></h3>
     <div class="steps">${COLS.map(([c, nm]) => `<span class="${c === t.col ? 'on ' + c : ''}">${nm}</span>`).join('')}</div>
@@ -278,6 +291,7 @@ async function showTask(id, keep){
     ${t.result ? `<label>결과</label>${ck}${res ? `<div class="box">${linkify(res)}</div>` : ''}` : ''}
     <label>맡은 직원</label><select id="tStaff" ${running ? 'disabled' : ''}>${staffOpts(t.staff_id)}</select>${running ? '<div class="sub">실행 중에는 담당 직원을 바꿀 수 없습니다. 끝나면 바꿔 주세요.</div>' : ''}
     <div class="row">${act}</div>
+    ${fix}
     <label>기록</label><div class="logs">${(logs || []).map(l => `<div class="lg"><span class="w">${when(l.at)}</span><span>${esc(l.text)}</span></div>`).join('') || '<div class="empty">기록 없음</div>'}</div>
     <div class="row"><input type="text" id="tNote" placeholder="메모 남기기" style="flex:1"><button class="btn" id="tNoteGo">남기기</button></div>
     <div class="row" style="justify-content:space-between"><span style="font-size:12px;color:var(--muted-fg)">${esc(t.created_by || '')} · ${when(t.created_at)}</span><button class="btn danger sm" id="tDel">지우기</button></div>`);
@@ -290,11 +304,16 @@ async function showTask(id, keep){
   if ($('#tRedoGo')) $('#tRedoGo').onclick = async e => {
     const b = e.currentTarget, rid = +b.dataset.id; b.disabled = true;   // 한 번만
     const memo = $('#tRedo').value.trim();
-    const err = await addLog(rid, memo ? `다시 하기: ${memo}` : '다시 하기 요청(메모 없음)', t.staff_id);   // 러너가 메모를 읽으므로 기록 먼저
-    if (err){ toast('메모 저장 실패 — 다시 하지 않았습니다: ' + err.message); b.disabled = false; return; }
-    if (!await updIf(rid, t.run_state ? {col:'todo', run_state:'queued'} : {col:'doing'}, qq => qq.eq('col', 'review'), '다시 하기')){ b.disabled = false; return; }
-    $('#tRedo').value = ''; load();
+    const err = await addLog(rid, memo ? `수정 요청: ${memo}` : '다시 하기 요청(메모 없음)', t.staff_id);   // 러너가 메모를 읽으므로 기록 먼저
+    if (err){ toast('수정 요청 저장 실패 — 보내지 않았습니다: ' + err.message); b.disabled = false; return; }
+    if (!await updIf(rid, t.run_state ? {col:'todo', run_state:'queued'} : {col:'doing'}, qq => qq.eq('col', 'review'), '수정 요청')){ b.disabled = false; return; }
+    $('#tRedo').value = ''; toast('수정 요청을 보냈습니다'); load();
   };
+  document.querySelectorAll('[data-ans]').forEach(b => b.onclick = () => {   // 같은 번호 답은 바꿔 끼움
+    const ta = $('#tRedo'), n = b.dataset.ans;
+    const lines = ta.value.split('\n').filter(l => l.trim() && !l.startsWith(n + '번:'));
+    ta.value = [...lines, `${n}번: ${b.dataset.val}`].join('\n');
+  });
   if ($('#tRetry')) $('#tRetry').onclick = async e => {
     const rid = +e.currentTarget.dataset.id;
     if (!await updIf(rid, {run_state:'queued', attempts:0, col:'todo'}, qq => qq.eq('run_state', 'error'), '다시 시도')) return;
