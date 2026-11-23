@@ -357,21 +357,13 @@ async function meatParty(){
 }
 // ---------- 놀이방 ----------
 let gameOn = false, gameTimer = null, pick = null, pos = {};
-// 배경(솔숲 스케치) 위 돌아다니는 구역 — [x1, x2, y1, y2] %, 발이 닿는 자리
-const ZONE = {
-  cathouse: [70, 81, 47, 52],   // 관리동 앞 고양이 집
-  home: [45, 66, 44, 47],       // 우리 집 데크(쵸파 집, 우리는 얹혀 삼)
-  yard: [70, 90, 58, 82],       // 마당(흰 콘크리트)
-  drive: [8, 55, 84, 94],       // 아래 진입로
-  stay: [24, 52, 67, 71]        // 솔숲 데크
-};
-function zoneFor(s){
-  const r = Math.random();
-  if (s.id === 'manager') return r < .45 ? 'home' : r < .8 ? 'yard' : 'drive';
-  if (s.species === 'dog') return r < .6 ? 'yard' : r < .85 ? 'drive' : 'stay';
-  return r < .4 ? 'cathouse' : r < .8 ? 'yard' : r < .92 ? 'drive' : 'stay';
+// 배경(솔숲 스케치) 위 어디든 자유롭게 — 하늘·먼 산(위쪽)만 빼고 솔숲 주변 전체(%, 발 위치)
+const FIELD = {x1: 3, x2: 96, y1: 38, y2: 97};
+const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
+function spot(from){
+  if (!from) return {x: FIELD.x1 + Math.random() * (FIELD.x2 - FIELD.x1), y: FIELD.y1 + Math.random() * (FIELD.y2 - FIELD.y1)};
+  return {x: clamp(from.x + (Math.random() - .5) * 50, FIELD.x1, FIELD.x2), y: clamp(from.y + (Math.random() - .5) * 34, FIELD.y1, FIELD.y2)};
 }
-function spot(z){ const [x1, x2, y1, y2] = ZONE[z]; return {x: x1 + Math.random() * (x2 - x1), y: y1 + Math.random() * (y2 - y1)}; }
 const SOUND = {cat:['야옹~', '냥!', '냐아옹', '골골골…', '하암~'], dog:['멍!', '왈왈!', '멍멍~', '헥헥', '킁킁…']};
 const IDLE = {
   manager:['오늘 일 나눌 거 있습니까?', '회의 한번 할까요?', '보고서 정리 중입니다.'],
@@ -401,7 +393,7 @@ function openGame(){
   staff.forEach(s => {
     const d = document.createElement('div'); d.className = 'pet'; d.dataset.pet = s.id;
     d.innerHTML = `<img src="${esc(s.avatar || '')}" alt=""><div class="tag">${esc(s.name)}</div>`;
-    room.appendChild(d); pos[s.id] = pos[s.id] || spot(s.id === 'manager' ? 'home' : s.species === 'dog' ? 'yard' : 'cathouse');
+    room.appendChild(d); pos[s.id] = pos[s.id] || spot();
     d.style.left = pos[s.id].x + '%'; d.style.top = pos[s.id].y + '%';
   });
   renderRank(); renderPick();
@@ -420,7 +412,7 @@ function gameStep(){
     if (s.id === pick){ d.classList.remove('walk'); return; }
     if (l.mood < 20){ d.classList.remove('walk'); d.insertAdjacentHTML('beforeend', '<span class="zz">💤</span>'); return; }   // 기분 바닥이면 잠
     if (Math.random() < (l.hunger < 30 ? 0.06 : 0.16)){   // 돌아다니기(배고프면 덜 움직임)
-      const p = pos[s.id], to = spot(zoneFor(s)), nx = to.x, ny = to.y;
+      const p = pos[s.id], to = spot(p), nx = to.x, ny = to.y;
       d.classList.toggle('flip', nx < p.x); d.classList.add('walk'); pos[s.id] = {x: nx, y: ny};
       d.style.left = nx + '%'; d.style.top = ny + '%'; setTimeout(() => d.classList.remove('walk'), 2600);
     }
