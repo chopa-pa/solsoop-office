@@ -119,6 +119,42 @@ textarea{min-height:90px;resize:vertical}
 .mrow .msg{max-width:none}
 .task .m .who{display:inline-flex;align-items:center;gap:4px}
 .task .m .ico{width:18px;height:18px}
+/* 게임: 인사고과·다마고치 */
+.gauges{display:flex;flex-direction:column;gap:3px;margin:8px auto 0;max-width:120px}
+.gauge{display:flex;align-items:center;gap:4px;font-size:11px}
+.gauge i{flex:1;height:6px;border-radius:4px;background:var(--muted);overflow:hidden;position:relative}
+.gauge i b{position:absolute;left:0;top:0;bottom:0;border-radius:4px;background:var(--primary)}
+.gauge i b.low{background:var(--danger)}
+.rank{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:12px 14px;margin-bottom:14px;box-shadow:var(--shadow)}
+.rank h4{margin:0 0 8px;font-size:14px;display:flex;align-items:center;gap:6px}
+.rank .r{display:flex;align-items:center;gap:8px;font-size:13px;padding:3px 0}
+.rank .r .n{width:22px;text-align:center;font-weight:700}
+.rank .r .p{margin-left:auto;font-weight:700}
+.rank .r .s{color:var(--muted-fg);font-size:12px;width:96px;text-align:right}
+.rank .judge{font-size:12px;color:var(--muted-fg);margin-top:6px;border-top:1px dashed var(--border);padding-top:6px}
+.treats{display:flex;gap:6px;flex-wrap:wrap;margin:-4px 0 10px}
+#game{position:fixed;inset:0;background:var(--bg,#f8fafc);z-index:10;display:flex;flex-direction:column}
+#game header{flex:none}
+.gwrap{flex:1;display:flex;gap:14px;padding:14px;min-height:0}
+.room{position:relative;flex:1;border-radius:18px;overflow:hidden;background:linear-gradient(#f3ead8 0 38%, #d9b98a 38% 100%);border:1px solid var(--border);box-shadow:var(--shadow);min-height:360px}
+.room .rug{position:absolute;left:18%;right:18%;top:52%;bottom:10%;border-radius:50%;background:radial-gradient(#9cc5a1,#7fb08a);opacity:.55}
+.room .sign{position:absolute;top:14px;left:50%;transform:translateX(-50%);background:#fff;border-radius:8px;padding:4px 12px;font-size:12px;color:var(--muted-fg);box-shadow:var(--shadow)}
+.pet{position:absolute;width:84px;text-align:center;cursor:pointer;transition:left 2.6s ease-in-out, top 2.6s ease-in-out;user-select:none}
+.pet img{width:76px;height:76px;border-radius:50%;border:3px solid #fff;box-shadow:0 4px 10px rgba(0,0,0,.18);background:#fff;transition:transform .3s}
+.pet.flip img{transform:scaleX(-1)}
+.pet.walk img{animation:hop .5s ease-in-out infinite}
+.pet.sel img{border-color:var(--primary)}
+.pet .tag{font-size:11px;font-weight:700;background:rgba(255,255,255,.85);border-radius:8px;padding:1px 6px;display:inline-block;margin-top:2px}
+.pet .say{position:absolute;bottom:100%;left:50%;transform:translateX(-50%);background:#fff;color:var(--fg);font-size:12px;padding:5px 9px;border-radius:12px;box-shadow:0 2px 8px rgba(0,0,0,.15);white-space:nowrap;max-width:220px;overflow:hidden;text-overflow:ellipsis;margin-bottom:4px;animation:pop .2s ease-out}
+.pet .zz{position:absolute;top:-6px;right:0;font-size:14px}
+@keyframes hop{0%,100%{transform:translateY(0)}50%{transform:translateY(-5px)}}
+.pet.flip.walk img{animation:hopf .5s ease-in-out infinite}
+@keyframes hopf{0%,100%{transform:scaleX(-1) translateY(0)}50%{transform:scaleX(-1) translateY(-5px)}}
+@keyframes pop{from{transform:translateX(-50%) scale(.6);opacity:0}to{transform:translateX(-50%) scale(1);opacity:1}}
+.gside{width:320px;flex:none;overflow-y:auto}
+.pick{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:12px 14px;box-shadow:var(--shadow)}
+.pick h4{margin:0 0 6px;display:flex;align-items:center;gap:8px;font-size:15px}
+@media (max-width:760px){.gwrap{flex-direction:column}.gside{width:auto}.room{min-height:420px}}
 /* 로그인 */
 #login{max-width:360px;margin:12vh auto;background:#fff;border:1px solid var(--border);border-radius:14px;padding:28px;box-shadow:var(--shadow)}
 #login h1{font-size:20px;margin-bottom:4px}
@@ -157,11 +193,27 @@ textarea{min-height:90px;resize:vertical}
     </section>
     <section id="officeCol">
       <h2>사무실 <small>직원을 누르면 대화합니다</small></h2>
-      <button class="btn" id="teamBtn" style="width:100%;margin-bottom:14px;justify-content:center">💬 솔숲 단톡방 — 직원 모두와 이야기</button>
+      <div class="row" style="margin:0 0 14px;gap:8px"><button class="btn" id="teamBtn" style="flex:1;justify-content:center">💬 솔숲 단톡방</button><button class="btn" id="gameBtn" style="flex:1;justify-content:center">🎮 놀이방 · 인사고과</button></div>
       <div class="desks" id="desks"></div>
       <p class="note">직원과 대화하다가 「이대로 맡기기」를 누르면 일감이 됩니다. 윈도우 서버의 직원이 끝까지 만들고, 글은 밀크(Codex)가 검수한 뒤 「확인 대기」에 올립니다.<br>게시·채널 수정·드라이브 저장은 「승인 · 실행」을 누르면 직원이 직접 합니다. 로그인·결제·문자 발송은 쵸파파가 합니다.</p>
     </section>
   </main>
+</div>
+
+<div id="game" class="hidden">
+  <header>
+    <button class="link" id="gameBack">← 사무실</button>
+    <h1>🎮 솔숲 놀이방</h1>
+    <span style="flex:1"></span>
+    <button class="link" id="voiceBtn"></button>
+  </header>
+  <div class="gwrap">
+    <div class="room" id="room"><div class="rug"></div><div class="sign">스테이솔숲 사무실 휴게실</div></div>
+    <aside class="gside">
+      <div class="rank" id="rank"></div>
+      <div class="pick" id="pick"><div class="sub">캐릭터를 눌러 보세요. 간식도 주고 쓰다듬을 수 있습니다.</div></div>
+    </aside>
+  </div>
 </div>
 
 <div id="ov" class="ov hidden"><div class="modal" id="modal"></div></div>
@@ -176,6 +228,8 @@ const STATUS = {idle:'쉬는 중',working:'일하는 중',waiting:'확인 기다
 const PEOPLE = {'lottopet@gmail.com':'쵸파파','withzoo2018@gmail.com':'쵸파맘'};
 const RS = {queued:['대기',''], running:['실행 중','running'], error:['막힘','error']};
 let chatSid = null, chatSeq = 0, chatThinking = false, chatHtml = '';
+let points = [], judges = {review:0, manager:0}, game = {};
+const chatHeard = {};
 let me = '', staff = [], tasks = [], openTask = null, showAllDone = false, runsToday = 0, loadSeq = 0, showSeq = 0;
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -203,7 +257,18 @@ async function load(){
   ]);
   if (seq !== loadSeq) return;
   if (a.error || b.error){ toast('불러오기 실패: ' + (a.error || b.error).message); return; }
-  staff = a.data; tasks = b.data; runsToday = c.error ? '–' : (c.count || 0); render(); sched();
+  staff = a.data; tasks = b.data; runsToday = c.error ? '–' : (c.count || 0);
+  const ws = weekStart();
+  const [pp, gg, jr, jm] = await Promise.all([
+    sb.from('office_points').select('staff_id,task_id,kind,pts').gte('at', ws),
+    sb.from('office_game').select('*'),
+    sb.from('office_log').select('*', {count:'exact', head:true}).eq('staff_id', 'review').like('text', '%검수함%').gte('at', ws),
+    sb.from('office_log').select('*', {count:'exact', head:true}).eq('staff_id', 'manager').like('text', '%맡김%').gte('at', ws)
+  ]);
+  if (seq !== loadSeq) return;
+  points = pp.data || []; game = Object.fromEntries((gg.data || []).map(g => [g.key, g.value || {}]));
+  judges = {review: jr.count || 0, manager: jm.count || 0};
+  render(); sched(); if (gameOn) renderPick();
   if (openTask){ const t = tasks.find(x => x.id === openTask); if (t) showTask(t.id, true); }
 }
 function render(){
@@ -219,8 +284,10 @@ function render(){
     const more = c === 'done' && total > 5 ? `<button class="more" id="moreDone">${showAllDone ? '접기' : `끝난 일 ${total}개 모두 보기`}</button>` : '';
     return `<div class="col ${c}"><div class="col-h"><span>${name}</span><span class="n">${total}</span></div><div class="col-b">${body}${more}</div></div>`;
   }).join('');
+  if (gameOn) renderRank();
   $('#desks').innerHTML = staff.map(s => {
     const mine = tasks.filter(t => t.staff_id === s.id && t.col !== 'done').length;
+    if (!s.bubble && s.status === 'idle' && life(s).hunger < 30) s = {...s, bubble: SNACK[s.species || 'cat'][1] + ' 먹고 싶어요…'};
     return `<div class="desk ${esc(s.status)}" data-staff="${esc(s.id)}">${s.bubble ? `<div class="bubble" title="${esc(s.bubble)}">${esc(s.bubble)}</div>` : ''}<div class="av">${s.avatar ? `<img src="${esc(s.avatar)}" alt="${esc(s.name)}">` : esc(s.emoji)}</div><div class="nm">${esc(s.name)}</div><div class="rl">${esc(s.role)}</div><span class="pill ${esc(s.status)}">${esc(STATUS[s.status] || s.status)}</span><div class="jobs">맡은 일 ${mine}개</div></div>`;
   }).join('');
 }
@@ -231,6 +298,152 @@ document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal()
 
 // 캐릭터 얼굴 아이콘(avatars/icons/, 원본 그림에서 머리만 잘라 96px). 없으면 이모지
 const ico = (s, cls = '') => { const f = (s?.avatar || '').match(/avatars\/([^/?]+)/); return f ? `<img class="ico ${cls}" src="avatars/icons/${esc(f[1])}?v=1" alt="${esc(s.name)}">` : esc(s?.emoji || ''); };
+// ---------- 게임: 인사고과 · 다마고치 (재미용, 실제 일엔 영향 없음) ----------
+function weekStart(){ const k = new Date(Date.now() + 9*3600e3); const d = (k.getUTCDay() + 6) % 7; k.setUTCDate(k.getUTCDate() - d); k.setUTCHours(0,0,0,0); return new Date(k - 9*3600e3).toISOString(); }
+const RANK_OUT = ['manager', 'review'];
+// 배부름 시간당 -2, 기분 시간당 -1 (마지막으로 먹은 때부터)
+function life(s){ const h = Math.max(0, (Date.now() - new Date(s.fed_at || Date.now())) / 3600e3); return {hunger: Math.max(0, Math.round((s.hunger ?? 80) - h*2)), mood: Math.max(0, Math.round((s.mood ?? 80) - h))}; }
+function ranking(){
+  const agg = {}; staff.filter(s => !RANK_OUT.includes(s.id)).forEach(s => agg[s.id] = {p:0, a:0, r:0});
+  points.forEach(x => { const a = agg[x.staff_id]; if (!a) return; a.p += x.pts || 0; if (x.kind === 'approve') a.a++; if (x.kind === 'revise') a.r++; });
+  return Object.entries(agg).sort((x, y) => y[1].p - x[1].p || y[1].a - x[1].a);
+}
+function renderRank(){
+  const medal = ['🥇','🥈','🥉'];
+  const rows = ranking().map(([id, v], i) => { const s = sById(id); return `<div class="r"><span class="n">${medal[i] || i + 1}</span>${ico(s)}<span>${esc(s.name)}</span><span class="p">${v.p}점</span><span class="s">승인 ${v.a} · 수정 ${v.r}</span></div>`; }).join('');
+  const meat = game.meat?.available ? `<button class="btn primary sm" id="meatGo" style="margin-top:8px;width:100%">🥩 고기 굽기 — 1등 ${esc(sById(game.meat.winner)?.name || '')} 상 (전원 회식)</button>` : '';
+  $('#rank').innerHTML = `<h4>🏆 이번 주 인사고과 <small style="font-weight:400;color:var(--muted-fg);font-size:12px">일요일 밤 9시 시상식</small></h4>${rows}
+    <div class="judge">심사위원 ${ico(sById('review'))} 밀크 검수 ${judges.review}건 · ${ico(sById('manager'))} 쵸파 나눠 맡김 ${judges.manager}건</div>${meat}`;
+  if ($('#meatGo')) $('#meatGo').onclick = meatParty;
+}
+const gaugeHtml = s => { const l = life(s); const g = (e, v) => `<div class="gauge" title="${v}">${e}<i><b class="${v < 30 ? 'low' : ''}" style="width:${v}%"></b></i></div>`; return `<div class="gauges">${g('🍖', l.hunger)}${g('😊', l.mood)}</div>`; };
+// 간식 반응(말로도 읽음). 캐릭터: 쵸파 장모 치와와·밀크 말티즈(강아지), 나머지 고양이
+const SNACK = {cat:['🐟 츄르', '츄르'], dog:['🦴 육포', '육포']};
+const REACT = {
+  manager:['멍! 육포 최고입니다. 오늘 일 나누기 더 힘내겠습니다!', '꼬리 흔들고 있습니다. 감사합니다, 쵸파파!', '멍멍! 이 맛에 총괄 이사 합니다.'],
+  review:['육포 감사합니다. 그래도 검수는 봐 드리지 않습니다.', '왈! 돋보기 들고 더 꼼꼼히 보겠습니다.', '맛있네요. 금지어 하나 더 찾아 드릴게요.'],
+  insta:['…맛있네요. 캡션 하나 더 쓰겠습니다.', '츄르는 못 참죠. 릴스 훅 세 개 더 뽑아 볼게요.', '냥. 오늘 피드는 제가 책임집니다.'],
+  writer:['츄르 받았으니 블로그 한 편 뚝딱입니다.', '냐옹~ 밉상 교자, 오늘은 착하게 쓸게요.', '맛있어요! 검색어도 잊지 않겠습니다.'],
+  channel:['헤드폰 벗고 먹었습니다. 채널 정리 계속할게요.', '츄르 감사합니다! 네이버 값 다시 확인해 둘게요.', '냥! 에어비앤비도 맞춰 두겠습니다.'],
+  sms:['츄르 좋아요~ 문자 문구 예쁘게 다듬을게요.', '냥냥, 손님 문자 빠짐없이 챙기겠습니다.', '맛있어요! 발송은 쵸파파 몫인 거 알죠?'],
+  design:['붓 내려놓고 츄르 먹었어요. 카드 하나 더 그릴게요.', '냥! 하이라이트 색 다시 맞춰 볼게요.', '츄르 힘으로 인쇄물 마무리하겠습니다.']
+};
+const FULL = '배불러요… 조금 있다가 주세요.';
+async function feed(sid){
+  const s = sById(sid); if (!s) return;
+  const l = life(s), snack = SNACK[s.species || 'cat'];
+  const line = l.hunger >= 95 ? FULL : (REACT[sid] || REACT.insta)[Math.floor(Math.random() * 3)];
+  if (l.hunger < 95){
+    const {error} = await sb.from('office_staff').update({hunger: Math.min(100, l.hunger + 35), mood: Math.min(100, l.mood + 15), fed_at: new Date().toISOString()}).eq('id', sid);
+    if (error){ toast('간식 실패: ' + error.message); return; }
+    await sb.from('office_points').insert({staff_id: sid, kind:'treat', pts:0, who: me, note: snack[1]});
+  }
+  await sb.from('office_chat').insert({staff_id: sid, role:'staff', who: s.name, text: `${snack[0].split(' ')[0]} ${line}`});
+  toast(`${s.name}에게 ${snack[1]}를 줬습니다`); load();
+  if (gameOn){ say(sid, line, 3500, true); } else { speak(line, sid); openChat(sid, true); }
+}
+async function meatParty(){
+  const b = $('#meatGo'); b.disabled = true;
+  const {data} = await sb.from('office_game').update({value: {...game.meat, available: false, used_by: me}}).eq('key', 'meat').select();
+  if (!data?.length){ toast('이미 구웠습니다'); load(); return; }
+  const now = new Date().toISOString();
+  await sb.from('office_staff').update({hunger: 100, mood: 100, fed_at: now}).in('id', staff.map(s => s.id));
+  const w = sById(game.meat.winner);
+  await sb.from('office_chat').insert([
+    {room:'team', staff_id:'manager', role:'staff', who:'쵸파', text:`🥩 쵸파파가 고기를 구웠습니다! 이번 주 1등 ${w?.name || ''} 축하합니다. 다들 배 터지게 드세요. 멍!`},
+    {room:'team', staff_id: w?.id || 'insta', role:'staff', who: w?.name || '', text:'🥩 1등 고기 맛있습니다! 다음 주도 1등 하겠습니다.'}
+  ]);
+  toast('🥩 고기 회식! 모두 배부르고 기분 최고'); load();
+  if (gameOn) staff.forEach((s, i) => setTimeout(() => say(s.id, s.species === 'dog' ? '멍! 고기다!' : '냥! 고기 최고!', 2500, i === 0), i * 300));
+}
+// ---------- 놀이방 ----------
+let gameOn = false, gameTimer = null, pick = null, pos = {};
+const SOUND = {cat:['야옹~', '냥!', '냐아옹', '골골골…', '하암~'], dog:['멍!', '왈왈!', '멍멍~', '헥헥', '킁킁…']};
+const IDLE = {
+  manager:['오늘 일 나눌 거 있습니까?', '회의 한번 할까요?', '보고서 정리 중입니다.'],
+  review:['금지어 없나 보는 중…', '「처마 밑 테라스」는 안 됩니다.', '돋보기 닦는 중.'],
+  insta:['릴스 훅 생각 중…', '오늘 피드 뭐 올리지', '해시태그는 세 개만.'],
+  writer:['블로그 제목 고민 중', '산청 펜션, 산청 독채…', '밉상 아니에요.'],
+  channel:['네이버 값 확인 중', '헤드폰 쓰면 집중 잘 돼요', '에어비앤비 달력 OK'],
+  sms:['입실 문자 점검 중~', '손님 문자 예쁘게!', '문구 마스터 보는 중'],
+  design:['색 고르는 중…', '하이라이트 카드 그려요', '붓 어디 뒀지']
+};
+const PET = {   // 쓰다듬기 반응
+  cat:['골골골… 좋아요.', '거기 말고 턱 밑이요.', '냥… 한 번만 더.'], dog:['꼬리 흔드는 중!', '헥헥, 더 해 주세요!', '배도 긁어 주세요 멍!']
+};
+let voiceOn = (() => { try { return localStorage.getItem('voice') !== 'off'; } catch { return true; } })();
+const VOICE = {manager:[1.3,1.05], review:[1.5,1.0], insta:[0.8,0.95], writer:[1.2,1.05], channel:[1.0,1.0], sms:[1.6,1.1], design:[1.4,1.0]};
+function speak(text, sid){   // 짧은 말만 소리로(브라우저 음성, 무료)
+  if (!voiceOn || !window.speechSynthesis || !text || text.length > 140) return;
+  const u = new SpeechSynthesisUtterance(text.replace(/[#*`>|\-]/g, ' ').replace(/[\u{1F300}-\u{1FAFF}\u2600-\u27BF]/gu, ''));
+  u.lang = 'ko-KR'; const [pi, ra] = VOICE[sid] || [1, 1]; u.pitch = pi; u.rate = ra;
+  const ko = speechSynthesis.getVoices().find(v => v.lang && v.lang.startsWith('ko')); if (ko) u.voice = ko;
+  speechSynthesis.cancel(); speechSynthesis.speak(u);
+}
+function setVoiceBtn(){ $('#voiceBtn').textContent = voiceOn ? '🔊 소리 켬' : '🔇 소리 끔'; }
+function openGame(){
+  gameOn = true; $('#game').classList.remove('hidden'); setVoiceBtn();
+  const room = $('#room'); room.querySelectorAll('.pet').forEach(e => e.remove());
+  staff.forEach(s => {
+    const d = document.createElement('div'); d.className = 'pet'; d.dataset.pet = s.id;
+    d.innerHTML = `<img src="${esc(s.avatar || '')}" alt=""><div class="tag">${esc(s.name)}</div>`;
+    room.appendChild(d); pos[s.id] = pos[s.id] || {x: 10 + Math.random()*75, y: 40 + Math.random()*45};
+    d.style.left = pos[s.id].x + '%'; d.style.top = pos[s.id].y + '%';
+  });
+  renderRank(); renderPick();
+  clearInterval(gameTimer); gameTimer = setInterval(gameStep, 1600);
+}
+function closeGame(){ gameOn = false; clearInterval(gameTimer); $('#game').classList.add('hidden'); try { speechSynthesis.cancel(); } catch {} }
+function say(sid, text, ms = 3200, voice = false){
+  const d = document.querySelector(`.pet[data-pet="${sid}"]`); if (!d) return;
+  d.querySelector('.say')?.remove(); const b = document.createElement('div'); b.className = 'say'; b.textContent = text; d.appendChild(b);
+  setTimeout(() => b.remove(), ms); if (voice) speak(text, sid);
+}
+function gameStep(){
+  staff.forEach(s => {
+    const d = document.querySelector(`.pet[data-pet="${s.id}"]`); if (!d) return;
+    const l = life(s); d.querySelector('.zz')?.remove();
+    if (s.id === pick){ d.classList.remove('walk'); return; }
+    if (l.mood < 20){ d.classList.remove('walk'); d.insertAdjacentHTML('beforeend', '<span class="zz">💤</span>'); return; }   // 기분 바닥이면 잠
+    if (Math.random() < (l.hunger < 30 ? 0.12 : 0.3)){   // 돌아다니기(배고프면 덜 움직임)
+      const p = pos[s.id], nx = Math.min(85, Math.max(2, p.x + (Math.random() - .5) * 40)), ny = Math.min(82, Math.max(36, p.y + (Math.random() - .5) * 30));
+      d.classList.toggle('flip', nx < p.x); d.classList.add('walk'); pos[s.id] = {x: nx, y: ny};
+      d.style.left = nx + '%'; d.style.top = ny + '%'; setTimeout(() => d.classList.remove('walk'), 2600);
+    }
+    if (Math.random() < 0.07){   // 혼잣말
+      const r = ranking().findIndex(([id]) => id === s.id);
+      const lines = l.hunger < 30 ? [`${SNACK[s.species || 'cat'][1]} 먹고 싶다…`, '배고파요…'] : r === 0 ? ['이번 주 1등은 저예요!', ...IDLE[s.id] || []] : [...SOUND[s.species || 'cat'], ...(IDLE[s.id] || [])];
+      say(s.id, lines[Math.floor(Math.random() * lines.length)]);
+    }
+  });
+}
+function renderPick(){
+  const s = sById(pick), box = $('#pick'); if (!box) return;
+  if (!s){ box.innerHTML = '<div class="sub">캐릭터를 눌러 보세요. 간식도 주고 쓰다듬을 수 있습니다.</div>'; return; }
+  const l = life(s), r = ranking(), i = r.findIndex(([id]) => id === s.id), v = i >= 0 ? r[i][1] : null;
+  box.innerHTML = `<h4>${ico(s, 'big')}${esc(s.name)} <small style="font-weight:400;color:var(--muted-fg);font-size:12px">${esc(s.role)}</small></h4>
+    <div style="font-size:13px;color:var(--muted-fg)">${esc(s.pet || '')}</div>
+    ${gaugeHtml(s).replace('class="gauges"', 'class="gauges" style="max-width:none;margin:10px 0"')}
+    <div style="font-size:13px">${v ? `이번 주 ${i + 1}등 · ${v.p}점 (승인 ${v.a} · 수정 ${v.r})` : '심사위원 — 순위 밖'}</div>
+    <div class="row" style="gap:6px"><button class="btn primary sm" data-feed="${esc(s.id)}">${SNACK[s.species || 'cat'][0]} 주기</button><button class="btn sm" data-pat="${esc(s.id)}">🤚 쓰다듬기</button><button class="btn sm" data-talk="${esc(s.id)}">💬 대화</button></div>`;
+}
+function petClick(sid){
+  document.querySelectorAll('.pet').forEach(e => e.classList.toggle('sel', e.dataset.pet === sid));
+  pick = sid; renderPick();
+  const s = sById(sid), l = life(s);
+  const lines = l.hunger < 30 ? ['배고파요… 간식 주세요.', `${SNACK[s.species || 'cat'][1]}…?`] : [...SOUND[s.species || 'cat'].slice(0, 2), ...(IDLE[sid] || []), '부르셨어요?', '네, 쵸파파!'];
+  say(sid, lines[Math.floor(Math.random() * lines.length)], 3200, true);
+}
+async function pat(sid){
+  const s = sById(sid), l = life(s);
+  await sb.from('office_staff').update({mood: Math.min(100, l.mood + 8), hunger: l.hunger, fed_at: new Date().toISOString()}).eq('id', sid);
+  const lines = PET[s.species || 'cat']; say(sid, lines[Math.floor(Math.random() * lines.length)], 3200, true); load();
+}
+async function award(t, kind, pts){   // 인사고과 점수(같은 일감·같은 종류 한 번 — DB가 막음)
+  if (!t?.staff_id) return;
+  const {error} = await sb.from('office_points').insert({staff_id: t.staff_id, task_id: t.id, kind, pts, who: me});
+  if (error && error.code !== '23505') console.warn('점수 기록 실패', error.message);
+}
 const staffOpts = sel => staff.map(s => `<option value="${esc(s.id)}" ${s.id === sel ? 'selected' : ''}>${esc(s.emoji + ' ' + s.name + ' — ' + s.role)}</option>`).join('');
 function newTask(){
   openModal(`<h3>일 맡기기<button class="x" data-close>×</button></h3>
@@ -314,6 +527,7 @@ async function showTask(id, keep){
     <label>맡은 직원</label><select id="tStaff" ${running ? 'disabled' : ''}>${staffOpts(t.staff_id)}</select>${running ? '<div class="sub">실행 중에는 담당 직원을 바꿀 수 없습니다. 끝나면 바꿔 주세요.</div>' : ''}
     <div class="row">${act}</div>
     ${fix}
+    ${t.staff_id && ['review','done'].includes(t.col) && !RANK_OUT.includes(t.staff_id) ? (points.some(x => x.task_id === t.id && x.kind === 'like') ? '<div class="sub">👍 칭찬했습니다 (+5점)</div>' : `<div class="row"><button class="btn sm" id="tLike">👍 잘했어 (+5점)</button></div>`) : ''}
     <label>기록</label><div class="logs">${(logs || []).map(l => `<div class="lg"><span class="w">${when(l.at)}</span><span>${esc(l.text)}</span></div>`).join('') || '<div class="empty">기록 없음</div>'}</div>
     <div class="row"><input type="text" id="tNote" placeholder="메모 남기기" style="flex:1"><button class="btn" id="tNoteGo">남기기</button></div>
     <div class="row" style="justify-content:space-between"><span style="font-size:12px;color:var(--muted-fg)">${esc(t.created_by || '')} · ${when(t.created_at)}</span><button class="btn danger sm" id="tDel">지우기</button></div>`);
@@ -329,6 +543,7 @@ async function showTask(id, keep){
     const err = await addLog(rid, memo ? `수정 요청: ${memo}` : '다시 하기 요청(메모 없음)', t.staff_id);   // 러너가 메모를 읽으므로 기록 먼저
     if (err){ toast('수정 요청 저장 실패 — 보내지 않았습니다: ' + err.message); b.disabled = false; return; }
     if (!await updIf(rid, t.run_state ? {col:'todo', run_state:'queued', phase:null, attempts:0} : {col:'doing'}, qq => qq.eq('col', 'review'), '수정 요청')){ b.disabled = false; return; }
+    if (memo) await sb.from('office_points').insert({staff_id: t.staff_id, task_id: rid, kind:'revise', pts:-2, who: me});
     $('#tRedo').value = ''; toast('수정 요청을 보냈습니다'); load();
   };
   document.querySelectorAll('[data-ans]').forEach(b => b.onclick = () => {   // 같은 번호 답은 바꿔 끼움
@@ -336,10 +551,11 @@ async function showTask(id, keep){
     const lines = ta.value.split('\n').filter(l => l.trim() && !l.startsWith(n + '번:'));
     ta.value = [...lines, `${n}번: ${b.dataset.val}`].join('\n');
   });
+  if ($('#tLike')) $('#tLike').onclick = async e => { e.currentTarget.disabled = true; await award(t, 'like', 5); await addLog(t.id, `${me}님이 칭찬함 👍`, t.staff_id); toast(`${sById(t.staff_id)?.name || ''} 칭찬했습니다`); load(); };
   if ($('#tExec')) $('#tExec').onclick = async e => {
     const b = e.currentTarget, rid = +b.dataset.id; b.disabled = true;
     if (!await updIf(rid, {col:'todo', run_state:'queued', phase:'exec', attempts:0}, qq => qq.eq('col', 'review'), '승인 · 실행')){ b.disabled = false; return; }
-    await addLog(rid, `${me}님이 승인 — 직원이 실행`, t.staff_id); toast('승인했습니다. 직원이 실행합니다'); load();
+    await addLog(rid, `${me}님이 승인 — 직원이 실행`, t.staff_id); await award(t, 'approve', 10); toast('승인했습니다. 직원이 실행합니다'); load();
   };
   if ($('#tRetry')) $('#tRetry').onclick = async e => {
     const rid = +e.currentTarget.dataset.id;
@@ -360,6 +576,7 @@ async function moveTask(col, id, from){   // id·from = 버튼이 들고 온 표
   const t = tasks.find(x => x.id === id);
   if (!await updIf(id, {col}, qq => notRunning(qq.eq('col', from)), '옮기기')) return;
   const msg = from === 'review' && col === 'done' ? `${me}님이 승인` : `${me}님이 「${COLNAME[col]}」으로 옮김`;
+  if (from === 'review' && col === 'done') await award(t, 'approve', 10);
   await addLog(id, msg, t?.staff_id); load();
 }
 function staffList(){
@@ -390,12 +607,17 @@ async function openChat(sid, keep){
   };
   const inner = (msgs.map(bub).join('') || `<div class="empty">${esc(s.name)}에게 하고 싶은 말을 적어 보세요. 일을 정하면 「이대로 맡기기」 버튼이 나옵니다.</div>`)
     + (chatThinking ? `<div class="msg think">${team ? '직원들이 답하는 중…' : esc(s.name) + (/[가-힣]/.test(s.name.slice(-1)) && (s.name.slice(-1).charCodeAt(0) - 0xAC00) % 28 ? '이' : '가') + ' 생각하는 중…'}</div>` : '');
+  // 새로 온 짧은 직원 말은 소리로(열어 둔 창에서만, 처음 열 때 옛말은 안 읽음)
+  const lastStaff = msgs.filter(m => m.role === 'staff').pop();
+  if (lastStaff && wasOpen && chatHeard[sid] && lastStaff.id > chatHeard[sid]) speak(lastStaff.text, lastStaff.staff_id);
+  if (lastStaff) chatHeard[sid] = lastStaff.id; else chatHeard[sid] = chatHeard[sid] || 1;
   // 이미 열린 대화 창이면 말 목록만 바꾼다 — 입력 칸을 다시 그리면 치던 글(한글 조합)·커서가 튕김(11-23 쵸파파)
   if (wasOpen && box && $('#cIn')){
     if (chatHtml !== inner){ chatHtml = inner; box.innerHTML = inner; if (atEnd) box.scrollTop = box.scrollHeight; }
     return;
   }
   openModal(`<h3><span>${team ? esc(s.emoji) : ico(s, 'big')} ${esc(s.name)} <small style="font-weight:500;color:var(--muted-fg);font-size:14px">${esc(s.role)}</small></span><button class="x" data-close>×</button></h3>
+    ${team ? '' : `<div class="treats"><button class="btn sm" id="cFeed">${SNACK[s.species || 'cat'][0]} 주기</button>${gaugeHtml(s).replace('class="gauges"', 'class="gauges" style="margin:0;flex:1;max-width:160px"')}</div>`}
     <div class="chat" id="cBox">${chatHtml = inner}</div>
     <textarea id="cIn" placeholder="${team ? '이름을 부르면 그 직원이, 「다들」이라고 하면 모두 답합니다. 부르지 않으면 쵸파가 답합니다.' : '예) 오늘 눈 온 거로 릴스 하나 만들자. 답을 기다리는 동안에도 더 적어 보내도 됩니다.'}" style="min-height:70px"></textarea>
     <div class="row"><button class="btn primary" id="cGo">보내기</button><span class="hint" style="font-size:12px">Ctrl+Enter로도 보냅니다</span><span style="flex:1"></span>${team ? '' : `<button class="btn sm" data-cfg="${esc(sid)}">지침 보기</button>`}</div>`);
@@ -409,6 +631,7 @@ async function openChat(sid, keep){
     $('#cIn').value = ''; $('#cBox').scrollTop = 1e9; openChat(sid, true);
   };
   $('#cGo').onclick = send;
+  if ($('#cFeed')) $('#cFeed').onclick = () => feed(sid);
   $('#cIn').onkeydown = e => { if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)){ e.preventDefault(); send(); } };
 }
 async function takeProposal(cid, btn){
@@ -436,6 +659,10 @@ document.addEventListener('click', e => {
   const c = e.target.closest('[data-close]'); if (c){ closeModal(); return; }
   const tk = e.target.closest('.task'); if (tk){ showTask(+tk.dataset.id); return; }
   const dk = e.target.closest('.desk'); if (dk){ openChat(dk.dataset.staff); return; }
+  const pt = e.target.closest('.pet'); if (pt){ petClick(pt.dataset.pet); return; }
+  const fd = e.target.closest('[data-feed]'); if (fd){ feed(fd.dataset.feed); return; }
+  const pa = e.target.closest('[data-pat]'); if (pa){ pat(pa.dataset.pat); return; }
+  const tk2 = e.target.closest('[data-talk]'); if (tk2){ openChat(tk2.dataset.talk); return; }
   const cf = e.target.closest('[data-cfg]'); if (cf){ showStaff(cf.dataset.cfg); return; }
   const op = e.target.closest('[data-open]'); if (op){ showTask(+op.dataset.open); return; }
   const pr = e.target.closest('[data-prop]'); if (pr){ takeProposal(+pr.dataset.prop, pr); return; }
@@ -446,6 +673,9 @@ document.addEventListener('click', e => {
 $('#newTask').onclick = newTask;
 $('#staffCfg').onclick = staffList;
 $('#teamBtn').onclick = () => openChat('team');
+$('#gameBtn').onclick = openGame;
+$('#gameBack').onclick = closeGame;
+$('#voiceBtn').onclick = () => { voiceOn = !voiceOn; try { localStorage.setItem('voice', voiceOn ? 'on' : 'off'); } catch {} setVoiceBtn(); if (voiceOn) speak('소리를 켰습니다', 'manager'); };
 $('#logout').onclick = async () => { await sb.auth.signOut(); location.reload(); };
 $('#loginForm').onsubmit = async e => {
   e.preventDefault(); $('#lErr').textContent = '';
@@ -468,6 +698,8 @@ async function start(){
   let deb = null; const again = () => { clearTimeout(deb); deb = setTimeout(load, 400); };
   if (!chan) chan = sb.channel('office').on('postgres_changes', {event:'*', schema:'public', table:'office_tasks'}, again)
     .on('postgres_changes', {event:'*', schema:'public', table:'office_staff'}, again)
+    .on('postgres_changes', {event:'*', schema:'public', table:'office_points'}, again)
+    .on('postgres_changes', {event:'*', schema:'public', table:'office_game'}, again)
     .on('postgres_changes', {event:'*', schema:'public', table:'office_chat'}, p => { const r = p.new || p.old; if (chatSid && (chatSid === 'team' ? r?.room === 'team' : r?.staff_id === chatSid && !r?.room)) openChat(chatSid, true); }).subscribe();
   setInterval(() => { if (chatSid && chatThinking) openChat(chatSid, true); }, 4000);   // 실시간이 끊겨도 답을 받음
   if (!timer) sched();
