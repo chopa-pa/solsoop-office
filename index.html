@@ -168,7 +168,7 @@ const COLNAME = Object.fromEntries(COLS);
 const STATUS = {idle:'쉬는 중',working:'일하는 중',waiting:'확인 기다림',off:'퇴근'};
 const PEOPLE = {'lottopet@gmail.com':'쵸파파','withzoo2018@gmail.com':'쵸파맘'};
 const RS = {queued:['대기',''], running:['실행 중','running'], error:['막힘','error']};
-let chatSid = null, chatSeq = 0, chatThinking = false;
+let chatSid = null, chatSeq = 0, chatThinking = false, chatHtml = '';
 let me = '', staff = [], tasks = [], openTask = null, showAllDone = false, runsToday = 0, loadSeq = 0, showSeq = 0;
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -365,7 +365,6 @@ async function openChat(sid, keep){
   if (seq !== chatSeq) return;
   if (error){ toast('대화 불러오기 실패: ' + error.message); return; }
   const wasOpen = chatSid === sid, box = $('#cBox'), atEnd = !box || box.scrollHeight - box.scrollTop - box.clientHeight < 40;
-  const draft = keep && wasOpen && $('#cIn') ? $('#cIn').value : '';
   chatSid = sid;
   const msgs = (data || []).reverse();
   chatThinking = msgs.some(m => m.role === 'user' && (m.state === 'pending' || m.state === 'thinking'));
@@ -374,17 +373,25 @@ async function openChat(sid, keep){
     const prop = !mine && m.proposal ? `<div class="prop"><b>${esc(m.proposal.title)}</b>${m.proposal.detail ? esc(m.proposal.detail) : ''}<div class="row" style="margin-top:6px">${m.task_id ? `<button class="btn sm" data-open="${esc(m.task_id)}">#${esc(m.task_id)}로 맡김 · 보기</button>` : `<button class="btn primary sm" data-prop="${esc(m.id)}">이대로 맡기기</button>`}</div></div>` : '';
     return `<div class="msg ${mine ? 'me' : ''}">${linkify(m.text)}${prop}<span class="w">${mine ? esc(m.who || '') + ' · ' : ''}${when(m.at)}${m.state === 'error' ? ' · 답 못 받음' : ''}</span></div>`;
   };
+  const inner = (msgs.map(bub).join('') || `<div class="empty">${esc(s.name)}에게 하고 싶은 말을 적어 보세요. 일을 정하면 「이대로 맡기기」 버튼이 나옵니다.</div>`)
+    + (chatThinking ? `<div class="msg think">${esc(s.name)}${/[가-힣]/.test(s.name.slice(-1)) && (s.name.slice(-1).charCodeAt(0) - 0xAC00) % 28 ? '이' : '가'} 생각하는 중…</div>` : '');
+  // 이미 열린 대화 창이면 말 목록만 바꾼다 — 입력 칸을 다시 그리면 치던 글(한글 조합)·커서가 튕김(11-23 쵸파파)
+  if (wasOpen && box && $('#cIn')){
+    if (chatHtml !== inner){ chatHtml = inner; box.innerHTML = inner; if (atEnd) box.scrollTop = box.scrollHeight; }
+    return;
+  }
   openModal(`<h3><span>${esc(s.emoji)} ${esc(s.name)} <small style="font-weight:500;color:var(--muted-fg);font-size:14px">${esc(s.role)}</small></span><button class="x" data-close>×</button></h3>
-    <div class="chat" id="cBox">${msgs.map(bub).join('') || `<div class="empty">${esc(s.name)}에게 하고 싶은 말을 적어 보세요. 일을 정하면 「이대로 맡기기」 버튼이 나옵니다.</div>`}${chatThinking ? `<div class="msg think">${esc(s.name)}${/[가-힣]/.test(s.name.slice(-1)) && (s.name.slice(-1).charCodeAt(0) - 0xAC00) % 28 ? '이' : '가'} 생각하는 중…</div>` : ''}</div>
-    <textarea id="cIn" placeholder="예) 오늘 눈 온 거로 릴스 하나 만들자" style="min-height:70px">${esc(draft)}</textarea>
+    <div class="chat" id="cBox">${chatHtml = inner}</div>
+    <textarea id="cIn" placeholder="예) 오늘 눈 온 거로 릴스 하나 만들자. 답을 기다리는 동안에도 더 적어 보내도 됩니다." style="min-height:70px"></textarea>
     <div class="row"><button class="btn primary" id="cGo">보내기</button><span class="hint" style="font-size:12px">Ctrl+Enter로도 보냅니다</span><span style="flex:1"></span><button class="btn sm" data-cfg="${esc(sid)}">지침 보기</button></div>`);
-  const nb = $('#cBox'); if (!wasOpen || atEnd) nb.scrollTop = nb.scrollHeight;
+  const nb = $('#cBox'); nb.scrollTop = nb.scrollHeight;
   const send = async () => {
     const text = $('#cIn').value.trim(); if (!text) return;
     $('#cGo').disabled = true;
     const {error} = await sb.from('office_chat').insert({staff_id: sid, role:'user', who: me, text, state:'pending'});
-    if (error){ toast('보내기 실패: ' + error.message); $('#cGo').disabled = false; return; }
-    $('#cIn').value = ''; openChat(sid);
+    $('#cGo').disabled = false;
+    if (error){ toast('보내기 실패: ' + error.message); return; }
+    $('#cIn').value = ''; $('#cBox').scrollTop = 1e9; openChat(sid, true);
   };
   $('#cGo').onclick = send;
   $('#cIn').onkeydown = e => { if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)){ e.preventDefault(); send(); } };
