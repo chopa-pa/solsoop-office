@@ -342,7 +342,7 @@ async function feed(sid){
     await sb.from('office_points').insert({staff_id: sid, kind:'treat', pts:0, who: me, note: snack[1]});
   }
   await sb.from('office_chat').insert({staff_id: sid, role:'staff', who: s.name, text: `${snack[0].split(' ')[0]} ${line}`});
-  toast(`${s.name}에게 ${snack[1]}를 줬습니다`); load();
+  toast(`${s.name}에게 ${snack[1]}를 줬습니다`); await load();   // 11-26: 기다려야 대화창·게이지가 새 값으로 그려짐
   if (gameOn){ say(sid, line, 3500, true); } else { openChat(sid, true); }
 }
 async function meatParty(){
@@ -472,7 +472,8 @@ function petClick(sid){
 async function pat(sid){
   const s = sById(sid), l = life(s);
   await sb.from('office_staff').update({mood: Math.min(100, l.mood + 8), hunger: l.hunger, fed_at: new Date().toISOString()}).eq('id', sid);
-  const lines = PET[s.species || 'cat']; say(sid, lines[Math.floor(Math.random() * lines.length)], 3200, true); load();
+  const lines = PET[s.species || 'cat']; say(sid, lines[Math.floor(Math.random() * lines.length)], 3200, true); await load();
+  if (!gameOn && chatSid === sid) openChat(sid, true);
 }
 async function award(t, kind, pts){   // 인사고과 점수(같은 일감·같은 종류 한 번 — DB가 막음)
   if (!t?.staff_id) return;
